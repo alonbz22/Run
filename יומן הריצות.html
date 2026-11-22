@@ -1,0 +1,991 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>יומן הריצות</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Assistant:wght@400;600;700&family=Rubik:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: a single scanning column — source bar, sticky filter row, KPI strip, then a two-column grid of panels that stacks on phones. */
+:root {
+  --bg: #f3f5f8;
+  --surface: #ffffff;
+  --surface-2: #f7f8fb;
+  --ink: #111827;
+  --ink-2: #485162;
+  --muted: #768091;
+  --line: #e1e5ec;
+  --accent: #2a78d6;
+  --accent-soft: #e3eefb;
+  --ghost: #c3c9d4;
+  --morning: #eb6834;
+  --noon: #1baf7a;
+  --evening: #6250d6;
+  --good: #0a7d3c;
+  --warn: #a86400;
+  --bad: #c2362f;
+  --h0: #e8ebf0; --h1: #b7d3f6; --h2: #6da7ec; --h3: #2a78d6; --h4: #184f95;
+  --shadow: 0 1px 2px rgba(17,24,39,.05), 0 4px 16px rgba(17,24,39,.04);
+  --font-display: "Rubik", "Segoe UI", Arial, sans-serif;
+  --font-body: "Assistant", "Segoe UI", Arial, sans-serif;
+  --radius: 10px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0e1117; --surface: #161a22; --surface-2: #1b2029; --ink: #eef0f4; --ink-2: #b6bcc8; --muted: #8a919e;
+    --line: #29303b; --accent: #3987e5; --accent-soft: #1a2a40; --ghost: #6b7585;
+    --morning: #d95926; --noon: #199e70; --evening: #9085e9; --good: #3fbf6f; --bad: #ef6b63; --warn: #e0a53a;
+    --h0: #262d39; --h1: #184f95; --h2: #256abf; --h3: #3987e5; --h4: #86b6ef;
+    --shadow: none; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0e1117; --surface: #161a22; --surface-2: #1b2029; --ink: #eef0f4; --ink-2: #b6bcc8; --muted: #8a919e;
+  --line: #29303b; --accent: #3987e5; --accent-soft: #1a2a40; --ghost: #6b7585;
+  --morning: #d95926; --noon: #199e70; --evening: #9085e9; --good: #3fbf6f; --bad: #ef6b63; --warn: #e0a53a;
+  --h0: #262d39; --h1: #184f95; --h2: #256abf; --h3: #3987e5; --h4: #86b6ef;
+  --shadow: none; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+body { margin: 0; }
+body { background: var(--bg); color: var(--ink); font-family: var(--font-body); font-size: 15px; line-height: 1.5; }
+.app { max-width: 1240px; margin: 0 auto; padding-block: 20px 48px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); display: flex; flex-direction: column; gap: 18px; }
+h1, h2, h3 { font-family: var(--font-display); margin: 0; text-wrap: balance; }
+h1 { font-size: 1.75rem; font-weight: 700; letter-spacing: -.01em; }
+h2 { font-size: 1.02rem; font-weight: 600; }
+.num { font-family: var(--font-display); font-variant-numeric: tabular-nums; }
+button, input, select { font: inherit; color: inherit; }
+button { cursor: pointer; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.muted { color: var(--muted); }
+.small { font-size: .85rem; }
+
+/* header */
+.top { display: flex; flex-wrap: wrap; align-items: flex-end; justify-content: space-between; gap: 12px 24px; }
+.top .sub { color: var(--ink-2); margin-top: 2px; }
+.source { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.pill { display: inline-flex; align-items: center; gap: 6px; padding: 5px 11px; border-radius: 999px; background: var(--surface); border: 1px solid var(--line); font-size: .85rem; color: var(--ink-2); }
+.dot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); flex: none; }
+.dot.on { background: var(--good); }
+.btn { border: 1px solid var(--line); background: var(--surface); border-radius: 8px; padding: 6px 13px; font-weight: 600; font-size: .88rem; }
+.btn:hover { border-color: var(--accent); }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+.btn:disabled { opacity: .55; cursor: progress; }
+
+/* filters */
+.filters { position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; background: var(--bg); padding-block: 8px; display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: center; border-bottom: 1px solid var(--line); }
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--bg); }
+.seg { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; }
+.seg .lbl { font-size: .78rem; color: var(--muted); letter-spacing: .03em; margin-inline-end: 4px; }
+.chip { border: 1px solid transparent; background: transparent; border-radius: 999px; padding: 4px 12px; font-size: .9rem; color: var(--ink-2); font-family: var(--font-display); font-variant-numeric: tabular-nums; }
+.chip:hover { background: var(--surface); border-color: var(--line); }
+.chip:disabled { opacity: .35; cursor: default; }
+.chip[aria-pressed="true"] { background: var(--ink); color: var(--bg); }
+.chip .sw { display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin-inline-end: 6px; vertical-align: 1px; }
+
+/* KPI strip */
+.kpis { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); }
+.kpi { padding: 14px 16px; border-inline-start: 1px solid var(--line); min-width: 0; }
+.kpi:first-child { border-inline-start: 0; }
+.kpi .k { font-size: .8rem; color: var(--muted); letter-spacing: .02em; }
+.kpi .v { font-family: var(--font-display); font-variant-numeric: tabular-nums; font-size: 1.7rem; font-weight: 600; line-height: 1.2; margin-top: 2px; white-space: nowrap; }
+.kpi .v small { font-size: .8rem; font-weight: 400; color: var(--muted); margin-inline-start: 3px; }
+.kpi .d { font-size: .8rem; color: var(--muted); margin-top: 2px; }
+.up { color: var(--good); } .down { color: var(--bad); }
+
+/* panels */
+.grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); padding: 16px 18px; min-width: 0; display: flex; flex-direction: column; gap: 12px; }
+.panel.wide { grid-column: 1 / -1; }
+.ph { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: baseline; gap: 4px 12px; }
+.ph .note { font-size: .82rem; color: var(--muted); }
+.chart { position: relative; height: 260px; }
+.chart.tall { height: 300px; }
+.legend { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: .82rem; color: var(--ink-2); }
+.legend i { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-inline-end: 5px; vertical-align: -1px; }
+
+/* tables */
+.tw { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: .92rem; }
+th { text-align: start; font-weight: 600; font-size: .78rem; color: var(--muted); letter-spacing: .02em; padding: 6px 10px; border-bottom: 1px solid var(--line); white-space: nowrap; }
+td { padding: 8px 10px; border-bottom: 1px solid var(--line); white-space: nowrap; font-variant-numeric: tabular-nums; }
+td.n, th.n { text-align: end; font-family: var(--font-display); }
+tbody tr:last-child td { border-bottom: 0; }
+.years tbody tr { cursor: pointer; }
+.years tbody tr:hover { background: var(--surface-2); }
+.years tbody tr.sel { background: var(--accent-soft); }
+.years td:first-child { font-family: var(--font-display); font-weight: 600; }
+.bar { display: inline-block; height: 6px; border-radius: 3px; background: var(--accent); vertical-align: middle; margin-inline-start: 8px; }
+.split { display: inline-flex; width: 90px; height: 8px; border-radius: 4px; overflow: hidden; gap: 1px; background: var(--surface); vertical-align: middle; }
+.split span { display: block; height: 100%; }
+th.sort { cursor: pointer; user-select: none; }
+th.sort:hover { color: var(--ink); }
+th.sort[aria-sort="none"]::after { content: " ↕"; font-size: .7em; opacity: .45; }
+th.sort[aria-sort="ascending"]::after { content: " ▲"; font-size: .7em; }
+th.sort[aria-sort="descending"]::after { content: " ▼"; font-size: .7em; }
+.tag { display: inline-flex; align-items: center; gap: 5px; font-size: .82rem; color: var(--ink-2); }
+.tag i { width: 8px; height: 8px; border-radius: 2px; display: inline-block; }
+.more { align-self: center; }
+.chev { color: var(--muted); font-family: var(--font-display); width: 1%; }
+.heat-box { display: flex; gap: 6px; }
+.heat-days { display: grid; grid-template-rows: repeat(7, 12px); gap: 3px; font-size: .68rem; color: var(--muted); line-height: 12px; margin-top: 20px; flex: none; }
+.loading { color: var(--ink-2); }
+
+/* time of day */
+.tod { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.todc { background: var(--surface-2); border-radius: 8px; padding: 10px 12px; min-width: 0; }
+.todc .t { display: flex; align-items: center; gap: 6px; font-weight: 700; }
+.todc .t i { width: 10px; height: 10px; border-radius: 2px; }
+.todc .big { font-family: var(--font-display); font-size: 1.5rem; font-weight: 600; font-variant-numeric: tabular-nums; }
+.todc dl { display: grid; grid-template-columns: auto 1fr; gap: 0 8px; margin: 4px 0 0; font-size: .85rem; }
+.todc dt { color: var(--muted); } .todc dd { margin: 0; text-align: end; font-family: var(--font-display); font-variant-numeric: tabular-nums; }
+.propbar { display: flex; height: 10px; border-radius: 5px; overflow: hidden; gap: 2px; }
+.propbar span { display: block; height: 100%; }
+
+/* heatmap */
+.heat-wrap { overflow-x: auto; padding-bottom: 4px; }
+.heat { display: grid; grid-auto-flow: column; grid-template-rows: repeat(7, 12px); gap: 3px; width: max-content; }
+.heat i { width: 12px; height: 12px; border-radius: 3px; background: var(--h0); display: block; }
+.heat i.l1 { background: var(--h1); } .heat i.l2 { background: var(--h2); } .heat i.l3 { background: var(--h3); } .heat i.l4 { background: var(--h4); }
+.heat i.pad { background: transparent; }
+.heat-months { display: grid; grid-auto-flow: column; gap: 3px; font-size: .72rem; color: var(--muted); width: max-content; margin-bottom: 4px; }
+.heat-months span { width: 12px; overflow: visible; white-space: nowrap; }
+.heat-legend { display: flex; align-items: center; gap: 4px; font-size: .75rem; color: var(--muted); }
+.heat-legend i { width: 12px; height: 12px; border-radius: 3px; display: inline-block; }
+
+/* records */
+.recs { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 10px; }
+.rec { border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; min-width: 0; }
+.rec .k { font-size: .8rem; color: var(--muted); }
+.rec .v { font-family: var(--font-display); font-size: 1.3rem; font-weight: 600; font-variant-numeric: tabular-nums; }
+.rec .w { font-size: .82rem; color: var(--ink-2); }
+
+/* goal */
+.goal-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 14px; }
+.goal-row input { width: 110px; padding: 5px 9px; border: 1px solid var(--line); border-radius: 7px; background: var(--surface); }
+.track { position: relative; height: 16px; background: var(--surface-2); border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+.track .fill { position: absolute; inset-block: 0; inset-inline-start: 0; background: var(--accent); border-radius: 8px; }
+.track .mark { position: absolute; inset-block: -2px; width: 2px; background: var(--ink); }
+.goal-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; }
+.goal-stats div { min-width: 0; }
+.goal-stats .k { font-size: .8rem; color: var(--muted); }
+.goal-stats .v { font-family: var(--font-display); font-size: 1.15rem; font-weight: 600; font-variant-numeric: tabular-nums; }
+
+/* insights */
+.ins { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 8px 22px; }
+.ins li { display: flex; gap: 10px; align-items: baseline; min-width: 0; }
+.ins li b { font-family: var(--font-display); font-variant-numeric: tabular-nums; font-weight: 600; }
+.ins .ico { flex: none; width: 18px; height: 18px; border-radius: 50%; display: inline-grid; place-items: center; font-size: .7rem; font-weight: 700; color: #fff; background: var(--accent); transform: translateY(3px); }
+.ins .ico.warn { background: var(--warn); }
+.help-btn { width: 30px; height: 30px; padding: 0; border-radius: 50%; border: 1px solid var(--line); background: var(--surface); font-family: var(--font-display); font-weight: 700; color: var(--ink-2); font-size: .95rem; line-height: 1; }
+.help-btn:hover, .help-btn[aria-expanded="true"] { border-color: var(--accent); color: var(--accent); }
+.help-pop { position: fixed; z-index: 40; width: min(400px, calc(100vw - 32px)); background: var(--surface); color: var(--ink); border: 1px solid var(--line); border-radius: 12px; box-shadow: 0 10px 36px rgba(10,14,20,.18); padding: 14px 16px; font-size: .9rem; max-height: calc(100vh - 32px); overflow-y: auto; }
+.help-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
+.help-head h3 { font-size: 1rem; font-weight: 600; }
+.help-x { border: 0; background: transparent; font-size: 1.3rem; line-height: 1; color: var(--muted); padding: 0 4px; }
+.help-pop ol { margin: 10px 0 8px; padding-inline-start: 20px; display: flex; flex-direction: column; gap: 6px; }
+.help-pop p { margin: 0; }
+details.excl summary { cursor: pointer; font-weight: 600; font-family: var(--font-display); }
+details.excl[open] summary { margin-bottom: 10px; }
+
+/* empty + dialog */
+.empty { background: var(--surface); border: 1px dashed var(--ghost); border-radius: var(--radius); padding: 36px 20px; text-align: center; display: flex; flex-direction: column; align-items: center; gap: 10px; }
+.drop.over { border-color: var(--accent); background: var(--accent-soft); }
+#tip { position: fixed; z-index: 50; pointer-events: none; background: var(--ink); color: var(--bg); font-size: .82rem; padding: 6px 9px; border-radius: 6px; max-width: 240px; white-space: pre-line; }
+.toast { position: fixed; bottom: calc(16px + env(safe-area-inset-bottom, 0px)); inset-inline-start: max(16px, env(safe-area-inset-left, 0px)); z-index: 60; background: var(--ink); color: var(--bg); padding: 9px 14px; border-radius: 8px; font-size: .9rem; }
+footer { color: var(--muted); font-size: .82rem; }
+
+@media (max-width: 980px) {
+  .kpis { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .kpi:nth-child(4) { border-inline-start: 0; }
+  .kpi:nth-child(n+4) { border-top: 1px solid var(--line); }
+  .grid { grid-template-columns: minmax(0, 1fr); }
+}
+@media (max-width: 560px) {
+  h1 { font-size: 1.45rem; }
+  .hide-sm { display: none; }
+  .filters { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
+  .filters .seg { flex-wrap: nowrap; flex: none; }
+  .recs { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  #runsTable thead { display: none; }
+  #runsTable tr { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); padding: 8px 0; border-bottom: 1px solid var(--line); gap: 2px 8px; }
+  #runsTable td { border: 0; padding: 0; text-align: start; }
+  #runsTable td.c-date { font-weight: 700; font-family: var(--font-display); grid-column: span 2; }
+  #runsTable td.c-dow { display: none; }
+  .years .bar, .chev { display: none; }
+  .years td, .years th { padding: 7px 6px; }
+  #runsTable td.c-tod { grid-column: span 2; text-align: end; }
+  #runsTable td[data-l]:not([data-l=""])::before { content: attr(data-l); display: block; font-size: .7rem; color: var(--muted); font-family: var(--font-body); }
+  .kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .kpi { border-inline-start: 0; border-top: 1px solid var(--line); }
+  .kpi:nth-child(-n+2) { border-top: 0; }
+  .kpi:nth-child(even) { border-inline-start: 1px solid var(--line); }
+  .kpi .v { font-size: 1.4rem; }
+  .tod { grid-template-columns: minmax(0, 1fr); }
+  .chart { height: 220px; }
+}
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+</style>
+
+<div class="app" dir="rtl" lang="he">
+  <header class="top">
+    <div>
+      <h1>יומן הריצות</h1>
+      <div class="sub" id="subtitle">כל הריצות מקובץ גארמין, לפי שנים</div>
+    </div>
+    <div class="source" id="source"></div>
+  </header>
+
+  <nav class="filters" id="filters" aria-label="סינון" hidden>
+    <div class="seg" id="yearSeg" role="group" aria-label="שנה"><span class="lbl">שנה</span></div>
+    <div class="seg" id="todSeg" role="group" aria-label="שעת הריצה"><span class="lbl">שעת הריצה</span></div>
+  </nav>
+
+  <main id="dash" hidden style="display:flex;flex-direction:column;gap:18px">
+    <section class="kpis" id="kpis" aria-label="סיכום"></section>
+
+    <section class="panel wide" id="insPanel">
+      <div class="ph"><h2>תובנות</h2><span class="note" id="insNote"></span></div>
+      <ul class="ins" id="ins"></ul>
+    </section>
+
+    <section class="panel wide">
+      <div class="ph"><h2>סיכום לפי שנים</h2><span class="note">לחיצה על שורה מציגה את השנה · ★ הקצב המהיר ביותר</span></div>
+      <div class="tw"><table class="years" id="yearsTable"></table></div>
+    </section>
+
+    <div class="grid">
+      <section class="panel">
+        <div class="ph"><h2 id="monthlyTitle">ק״מ לפי חודש</h2><div class="legend" id="monthlyLegend"></div></div>
+        <div dir="ltr" class="chart"><canvas id="cMonthly" role="img" aria-label="קילומטרים לפי חודש"></canvas></div>
+      </section>
+      <section class="panel">
+        <div class="ph"><h2>שעת הריצה</h2><span class="note">בוקר <bdi dir="ltr">04:00–11:00</bdi> · צהריים <bdi dir="ltr">11:00–16:00</bdi> · ערב <bdi dir="ltr">16:00–04:00</bdi></span></div>
+        <div class="propbar" id="todBar"></div>
+        <div class="tod" id="todCards"></div>
+      </section>
+      <section class="panel wide">
+        <div class="ph"><h2>מגמת קצב</h2><div class="legend" id="paceLegend"><span data-t="morning"><i style="background:var(--morning)"></i>בוקר</span><span data-t="noon"><i style="background:var(--noon)"></i>צהריים</span><span data-t="evening"><i style="background:var(--evening)"></i>ערב</span><span><i style="background:var(--ink);height:2px;vertical-align:3px"></i>ממוצע נע (15 ריצות)</span></div></div>
+        <p class="note muted small" style="margin:0">כל נקודה היא ריצה. למעלה = מהיר יותר.</p>
+        <div dir="ltr" class="chart tall"><canvas id="cPace" role="img" aria-label="קצב ממוצע לאורך זמן"></canvas></div>
+      </section>
+      <section class="panel wide">
+        <div class="ph"><h2 id="weeklyTitle">נפח שבועי</h2>
+          <div class="legend"><span><i style="background:var(--accent)"></i>ק״מ בשבוע</span><span><i style="background:var(--warn)"></i>קפיצה חדה (מעל פי 1.3 מהממוצע)</span><span><i style="background:var(--ink);height:2px;vertical-align:3px"></i>ממוצע 4 שבועות</span></div></div>
+        <div dir="ltr" class="chart"><canvas id="cWeekly" role="img" aria-label="קילומטרים בשבוע"></canvas></div>
+      </section>
+      <section class="panel wide">
+        <div class="ph"><h2>שיאים</h2><span class="note" id="recNote"></span></div>
+        <div class="recs" id="recs"></div>
+      </section>
+      <section class="panel">
+        <div class="ph"><h2>מצטבר שנתי</h2><span class="note">ק״מ מצטברים מתחילת כל שנה</span></div>
+        <div dir="ltr" class="chart"><canvas id="cCum" role="img" aria-label="קילומטרים מצטברים לפי שנה"></canvas></div>
+      </section>
+      <section class="panel" id="goalPanel"></section>
+      <section class="panel wide">
+        <div class="ph"><h2 id="heatTitle">לוח ריצות</h2>
+          <div class="heat-legend" aria-hidden="true">פחות <i style="background:var(--h0)"></i><i style="background:var(--h1)"></i><i style="background:var(--h2)"></i><i style="background:var(--h3)"></i><i style="background:var(--h4)"></i> יותר</div>
+        </div>
+        <div class="heat-box"><div class="heat-days" aria-hidden="true"><span>א׳</span><span></span><span>ג׳</span><span></span><span>ה׳</span><span>ו׳</span><span></span></div>
+        <div class="heat-wrap" id="heatWrap"><div class="heat-months" id="heatMonths"></div><div class="heat" id="heat"></div></div></div>
+      </section>
+      <section class="panel">
+        <div class="ph"><h2>ימים בשבוע</h2><span class="note">מספר ריצות</span></div>
+        <div dir="ltr" class="chart"><canvas id="cDow" role="img" aria-label="ריצות לפי יום בשבוע"></canvas></div>
+      </section>
+      <section class="panel">
+        <div class="ph"><h2>התפלגות מרחקים</h2><span class="note">מספר ריצות בכל טווח</span></div>
+        <div dir="ltr" class="chart"><canvas id="cDist" role="img" aria-label="התפלגות מרחקי ריצה"></canvas></div>
+      </section>
+      <section class="panel wide">
+        <div class="ph"><h2>כל הריצות</h2><span class="note" id="runsNote"></span></div>
+        <div class="tw"><table id="runsTable"></table></div>
+        <button class="btn more" id="moreBtn" type="button">הצג עוד</button>
+      </section>
+      <section class="panel wide">
+        <details class="excl" id="exclDetails">
+          <summary id="exclSummary">פעילויות שהוחרגו</summary>
+          <p class="muted small" style="margin:0 0 8px">לא נכללות בדאשבורד: פעילות שאינה ריצה, ריצה ללא זמן, ריצה קצרה מהמרחק המינימלי או איטית מהקצב המקסימלי.</p>
+          <div class="goal-row" style="margin-bottom:10px">
+            <label for="minKm" class="small muted">מרחק מינימלי (ק״מ)</label><input id="minKm" type="number" min="0" step="0.1" class="num">
+            <label for="maxPace" class="small muted">קצב מקסימלי (דק׳:שנ׳)</label><input id="maxPace" type="text" inputmode="numeric" pattern="\d{1,2}:\d{2}" class="num" dir="ltr">
+            <button class="btn" id="resetRules" type="button">ברירת מחדל (1.5 ק״מ, 7:00)</button>
+          </div>
+          <div class="tw"><table id="exclTable"></table></div>
+        </details>
+      </section>
+    </div>
+  </main>
+
+  <section class="empty" id="noMatch" hidden><h2 id="noMatchTitle"></h2><button class="btn" id="clearTod" type="button">הצג את כל שעות הריצה</button></section>
+
+  <section class="empty drop" id="empty">
+    <h2 id="emptyHead">העלה את קובץ הריצות שלך מגארמין</h2>
+    <p class="muted" id="emptyText" style="margin:0;max-width:52ch" aria-live="polite">בחר קובץ CSV שייצאת מאתר Garmin Connect, או גרור אותו לכאן. לחץ על סימן השאלה להנחיות ייצוא. הקובץ נקרא במחשב שלך בלבד.</p>
+    <div class="source" id="emptyActions"></div>
+  </section>
+
+  <footer id="footer"></footer>
+</div>
+
+<input type="file" id="csvInput" accept=".csv,text/csv" hidden>
+<div class="help-pop" id="helpPop" role="dialog" aria-labelledby="helpTitle" dir="rtl" lang="he" hidden>
+  <div class="help-head"><h3 id="helpTitle">איך מייצאים קובץ ריצות מגארמין</h3><button class="help-x" id="helpClose" type="button" aria-label="סגור">×</button></div>
+  <ol>
+    <li>נכנסים מהמחשב לאתר <b dir="ltr">connect.garmin.com</b> ומתחברים לחשבון.</li>
+    <li>בתפריט הצד בוחרים <b>Activities</b> ואז <b>All Activities</b> (פעילויות ← כל הפעילויות).</li>
+    <li>אפשר לסנן לפי סוג <b>Running</b>. זה לא חובה, כי פעילויות שאינן ריצה מוחרגות ממילא.</li>
+    <li>גוללים עד סוף הרשימה וממשיכים לגלול עד שהיא מפסיקה להיטען. <b>הייצוא כולל רק פעילויות שנטענו בדף</b>, אז כדי לקבל את כל ההיסטוריה צריך להגיע לריצה הראשונה.</li>
+    <li>לוחצים על <b>Export CSV</b> בפינה העליונה של הרשימה. יורד קובץ בשם <b dir="ltr">Activities.csv</b>.</li>
+    <li>חוזרים לכאן, לוחצים <b>העלה קובץ</b> ובוחרים את הקובץ, או גוררים אותו לדף.</li>
+  </ol>
+  <p class="small muted">טיפים: יחידות המרחק בחשבון צריכות להיות קילומטרים. בודקים ב־<bdi dir="ltr">Settings → Display Preferences → Units of Measure → Metric</bdi>. הקובץ נקרא במחשב שלך בלבד ולא נשלח לשום מקום. כדי לעדכן, מייצאים קובץ חדש ומעלים אותו שוב.</p>
+</div>
+<div id="tip" hidden></div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.js"></script>
+<script>
+(() => {
+'use strict';
+document.documentElement.dir = 'rtl'; document.documentElement.lang = 'he';
+
+/* ------------------------------------------------------------ constants */
+const DEF_MIN_KM = 1.5;
+const DEF_MAX_PACE = 7 * 60;      // seconds per km
+const RUN_TYPES = new Set(['running', 'treadmill_running', 'trail_running', 'track_running', 'street_running',
+  'virtual_run', 'indoor_running', 'ultra_run', 'obstacle_run']);
+const TOD = [
+  { k: 'morning', label: 'בוקר', color: '--morning' },
+  { k: 'noon', label: 'צהריים', color: '--noon' },
+  { k: 'evening', label: 'ערב', color: '--evening' },
+];
+const MONTHS = ['ינו׳', 'פבר׳', 'מרץ', 'אפר׳', 'מאי', 'יוני', 'יולי', 'אוג׳', 'ספט׳', 'אוק׳', 'נוב׳', 'דצמ׳'];
+const DOW = ['א׳', 'ב׳', 'ג׳', 'ד׳', 'ה׳', 'ו׳', 'ש׳'];
+const DOW_FULL = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'];
+const TYPE_LABEL = { running: 'ריצה', treadmill_running: 'הליכון', trail_running: 'ריצת שטח', track_running: 'מסלול',
+  walking: 'הליכה', jump_rope: 'קפיצה בחבל', cycling: 'רכיבה', hiking: 'טיול רגלי', lap_swimming: 'שחייה',
+  strength_training: 'כוח' };
+const DIST_BINS = [[1.5, 5, '1.5–5'], [5, 8, '5–8'], [8, 12, '8–12'], [12, 16, '12–16'], [16, 21.1, '16–21'], [21.1, 30, '21–30'], [30, 1e9, '30+']];
+const STORE_KEY = 'run-dash-csv-v1';
+
+/* ------------------------------------------------------------ state */
+const S = { raw: [], minKm: DEF_MIN_KM, maxPace: DEF_MAX_PACE, all: [], runs: [], excluded: [], year: 'all', tod: 'all', sort: { key: 'date', dir: -1 }, shown: 25,
+  sourceLabel: '', charts: {} };
+const $ = id => document.getElementById(id);
+const store = {
+  get(k) { try { return localStorage.getItem(k); } catch { return null; } },
+  set(k, v) { try { localStorage.setItem(k, v); } catch { /* storage unavailable */ } },
+  del(k) { try { localStorage.removeItem(k); } catch { /* ignore */ } },
+};
+
+/* ------------------------------------------------------------ formatting */
+const nf = (x, d = 0) => Number(x).toLocaleString('he-IL', { minimumFractionDigits: d, maximumFractionDigits: d });
+const pad = n => String(n).padStart(2, '0');
+function fmtPace(s) { if (!isFinite(s) || s <= 0) return '–'; let m = Math.floor(s / 60), r = Math.round(s - m * 60); if (r === 60) { m++; r = 0; } return `${m}:${pad(r)}`; }
+function fmtDur(s) { s = Math.round(s); const h = Math.floor(s / 3600), m = Math.floor(s % 3600 / 60), r = s % 60; return h ? `${h}:${pad(m)}:${pad(r)}` : `${m}:${pad(r)}`; }
+function fmtHours(s) { let h = Math.floor(s / 3600), m = Math.round(s % 3600 / 60); if (m === 60) { h++; m = 0; } return `${nf(h)}<small>שע׳</small> ${m}<small>דק׳</small>`; }
+function fmtHoursPlain(s) { const h = Math.floor(s / 3600), m = Math.round(s % 3600 / 60); return `${nf(h)}:${pad(m)}`; }
+const fmtDate = d => `${d.getDate()}.${d.getMonth() + 1}.${d.getFullYear()}`;
+const css = name => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+
+/* ------------------------------------------------------------ data model */
+function parseLocal(s) {
+  const m = /^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})(?::(\d{2}))?/.exec(s || '');
+  return m ? new Date(+m[1], +m[2] - 1, +m[3], +m[4], +m[5], +(m[6] || 0)) : null;
+}
+const todOf = h => (h >= 4 && h < 11) ? 'morning' : (h >= 11 && h < 16) ? 'noon' : 'evening';
+const dayKey = d => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+const dayNum = d => Math.round(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate()) / 864e5);
+const doyOf = d => dayNum(d) - dayNum(new Date(d.getFullYear(), 0, 1)) + 1;
+const daysInYear = y => (y % 4 === 0 && (y % 100 !== 0 || y % 400 === 0)) ? 366 : 365;
+
+function enrich(r) {
+  const d = parseLocal(r.date);
+  if (!d) return null;
+  const type = String(r.type || '').toLowerCase().trim().replace(/[\s-]+/g, '_');
+  const dist = +r.dist || 0, dur = +r.dur || 0;
+  const pace = dist > 0 ? dur / dist : Infinity;
+  const o = { ...r, type, d, y: d.getFullYear(), m: d.getMonth(), dow: d.getDay(), doy: doyOf(d), day: dayNum(d),
+    tod: todOf(d.getHours()), dist, dur, cal: +r.cal || 0, pace };
+  o.why = !RUN_TYPES.has(type) ? `לא ריצה (${TYPE_LABEL[type] || type.replace(/_/g, ' ')})`
+    : dist < S.minKm ? `מרחק קצר מ־${nf(S.minKm, 1)} ק״מ`
+    : !(dur > 0) || !isFinite(pace) ? 'זמן חסר'
+    : pace > S.maxPace ? `קצב איטי מ־${fmtPace(S.maxPace)}`
+    : null;
+  return o;
+}
+
+function setData(records, label) {
+  S.raw = records;
+  S.all = records.map(enrich).filter(Boolean).sort((a, b) => b.d - a.d);
+  S.runs = S.all.filter(r => !r.why);
+  S.excluded = S.all.filter(r => r.why);
+  S.sourceLabel = label;
+  const years = yearsList();
+  if (S.year !== 'all' && !years.includes(S.year)) S.year = 'all';
+  S.shown = 25;
+  render();
+}
+
+/* ------------------------------------------------------------ CSV import */
+function parseCSV(text) {
+  const rows = []; let row = [], f = '', q = false;
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (q) { if (c === '"') { if (text[i + 1] === '"') { f += '"'; i++; } else q = false; } else f += c; }
+    else if (c === '"') q = true;
+    else if (c === ',') { row.push(f); f = ''; }
+    else if (c === '\n' || c === '\r') { if (c === '\r' && text[i + 1] === '\n') i++; row.push(f); rows.push(row); row = []; f = ''; }
+    else f += c;
+  }
+  if (f || row.length) { row.push(f); rows.push(row); }
+  return rows.filter(r => r.length > 1 || r[0]);
+}
+const toNum = s => {
+  let t = String(s ?? '').replace(/['\s]/g, '');
+  t = /^\d+,\d{1,2}$/.test(t) ? t.replace(',', '.') : t.replace(/,/g, '');   // "5,23" = decimal comma, "1,293" = thousands
+  const v = parseFloat(t); return isFinite(v) ? v : 0;
+};
+function toSec(s) {
+  s = String(s || '').trim(); if (!s || s === '--') return 0;
+  const p = s.split(':').map(Number); if (p.some(isNaN)) return 0;
+  return p.reduce((a, v) => a * 60 + v, 0);
+}
+function csvToRecords(text) {
+  const rows = parseCSV(text.replace(/^﻿/, ''));
+  if (rows.length < 2) throw new Error('הקובץ ריק.');
+  const h = rows[0].map(x => x.trim());
+  const col = (...names) => { for (const n of names) { const i = h.indexOf(n); if (i >= 0) return i; } return -1; };
+  const iType = col('Activity Type', 'סוג פעילות'), iDate = col('Date', 'תאריך'), iDist = col('Distance', 'מרחק'),
+    iTime = col('Time', 'Elapsed Time', 'זמן'), iCal = col('Calories', 'קלוריות'), iTitle = col('Title', 'כותרת');
+  if (iDate < 0 || iDist < 0 || iTime < 0) throw new Error('לא נמצאו העמודות Date, Distance ו־Time. ודא שזה קובץ פעילויות שיוצא מ־Garmin Connect באנגלית.');
+  return rows.slice(1).map(r => ({
+    id: `csv-${r[iDate]}`, date: r[iDate], type: iType >= 0 ? r[iType] : 'Running', title: iTitle >= 0 ? r[iTitle] : '',
+    dist: toNum(r[iDist]), dur: toSec(r[iTime]), cal: iCal >= 0 ? toNum(r[iCal]) : 0,
+  })).filter(r => parseLocal(r.date));
+}
+async function loadCSVFile(file) {
+  try {
+    const recs = csvToRecords(await file.text());
+    if (!recs.length) throw new Error('לא נמצאו פעילויות בקובץ.');
+    store.set(STORE_KEY, JSON.stringify({ name: file.name, at: Date.now(), recs }));
+    setData(recs, `קובץ ${file.name}`);
+    toast(`נטענו ${nf(recs.length)} פעילויות מהקובץ`);
+  } catch (e) { toast(e.message || 'קריאת הקובץ נכשלה'); }
+}
+
+/* ------------------------------------------------------------ helpers for stats */
+function yearsList() { return [...new Set(S.runs.map(r => r.y))].sort((a, b) => b - a); }
+const inTod = r => S.tod === 'all' || r.tod === S.tod;
+function scoped() { return S.runs.filter(r => inTod(r) && (S.year === 'all' || r.y === S.year)); }
+function agg(list) {
+  const km = list.reduce((a, r) => a + r.dist, 0), dur = list.reduce((a, r) => a + r.dur, 0), cal = list.reduce((a, r) => a + r.cal, 0);
+  return { n: list.length, km, dur, cal, pace: km ? dur / km : NaN, avgKm: list.length ? km / list.length : 0,
+    longest: list.reduce((m, r) => r.dist > (m?.dist || 0) ? r : m, null) };
+}
+const weekStart = r => r.day - r.dow;   // Sunday-based week, as in Israel
+const today = new Date();
+const curYear = today.getFullYear();
+
+/* ------------------------------------------------------------ render: source + filters */
+function renderSource() {
+  const has = S.all.length > 0;
+  const btns = (pfx) => `<button class="btn primary" type="button" data-act="upload">העלה קובץ</button>
+    <button class="help-btn" type="button" data-act="help" aria-label="איך מייצאים קובץ מגארמין" aria-expanded="false" aria-controls="helpPop" id="${pfx}Help">?</button>`;
+  $('source').innerHTML = (has ? `<span class="pill"><span class="dot on"></span>${esc(S.sourceLabel)}</span>` : '') + btns('top')
+    + (has ? `<button class="btn" type="button" data-act="clear" title="מוחק את הנתונים שנשמרו בדפדפן הזה">הסר נתונים</button>` : '');
+  $('emptyActions').innerHTML = btns('empty');
+}
+document.addEventListener('click', e => {
+  const b = e.target.closest('[data-act]');
+  if (b?.dataset.act === 'upload') $('csvInput').click();
+  else if (b?.dataset.act === 'help') toggleHelp(b);
+  else if (b?.dataset.act === 'clear') { store.del(STORE_KEY); S.raw = []; setData([], ''); toast('הנתונים הוסרו מהדפדפן.'); }
+  else if (!e.target.closest('#helpPop') && !$('helpPop').hidden) closeHelp();
+});
+let helpAnchor = null;
+function placeHelp() {
+  const pop = $('helpPop'), r = helpAnchor.getBoundingClientRect(), w = pop.offsetWidth;
+  let left = r.left + r.width / 2 - w / 2; left = Math.max(16, Math.min(left, innerWidth - w - 16));
+  let top = r.bottom + 8; if (top + pop.offsetHeight > innerHeight - 16) top = Math.max(16, innerHeight - pop.offsetHeight - 16);
+  pop.style.left = left + 'px'; pop.style.top = top + 'px';
+}
+function toggleHelp(btn) {
+  if (!$('helpPop').hidden && helpAnchor === btn) { closeHelp(); return; }
+  closeHelp(); helpAnchor = btn; $('helpPop').hidden = false; btn.setAttribute('aria-expanded', 'true'); placeHelp(); $('helpClose').focus();
+}
+function closeHelp() { $('helpPop').hidden = true; if (helpAnchor) { helpAnchor.setAttribute('aria-expanded', 'false'); if ($('helpPop').contains(document.activeElement)) helpAnchor.focus(); } helpAnchor = null; }
+$('helpClose').onclick = closeHelp;
+document.addEventListener('keydown', e => { if (e.key === 'Escape' && !$('helpPop').hidden) closeHelp(); });
+addEventListener('resize', () => { if (helpAnchor) placeHelp(); });
+addEventListener('scroll', () => { if (helpAnchor) placeHelp(); }, { passive: true });
+$('csvInput').onchange = e => { const f = e.target.files[0]; if (f) loadCSVFile(f); e.target.value = ''; };
+document.addEventListener('dragover', e => { e.preventDefault(); $('empty').classList.add('over'); });
+document.addEventListener('dragleave', e => { if (!e.relatedTarget) $('empty').classList.remove('over'); });
+document.addEventListener('drop', e => { e.preventDefault(); $('empty').classList.remove('over'); const f = e.dataTransfer.files[0]; if (f) loadCSVFile(f); });
+
+function renderFilters() {
+  const ys = $('yearSeg'), ts = $('todSeg');
+  ys.querySelectorAll('.chip').forEach(n => n.remove()); ts.querySelectorAll('.chip').forEach(n => n.remove());
+  const chip = (parent, label, pressed, onClick, sw) => {
+    const b = document.createElement('button'); b.type = 'button'; b.className = 'chip'; b.setAttribute('aria-pressed', pressed);
+    b.innerHTML = (sw ? `<span class="sw" style="background:var(${sw})"></span>` : '') + label; b.onclick = onClick; parent.appendChild(b);
+  };
+  chip(ys, 'כל השנים', S.year === 'all', () => { S.year = 'all'; S.shown = 25; render(); });
+  yearsList().forEach(y => { chip(ys, y, S.year === y, () => { S.year = y; S.shown = 25; render(); });
+    if (!S.runs.some(r => r.y === y && inTod(r))) ys.lastChild.disabled = true; });
+  chip(ts, 'הכול', S.tod === 'all', () => { S.tod = 'all'; S.shown = 25; render(); });
+  TOD.forEach(t => chip(ts, t.label, S.tod === t.k, () => { S.tod = t.k; S.shown = 25; render(); }, t.color));
+}
+
+/* ------------------------------------------------------------ render: KPIs */
+function delta(cur, prev, betterLower) {
+  if (!isFinite(cur) || !isFinite(prev) || !prev) return '';
+  const p = (cur - prev) / prev * 100; if (Math.abs(p) < 0.5) return '<span>ללא שינוי</span>';
+  const good = betterLower ? p < 0 : p > 0;
+  return `<span class="${good ? 'up' : 'down'}">${p > 0 ? '▲' : '▼'} ${nf(Math.abs(p))}%</span>`;
+}
+function renderKPIs(list) {
+  const a = agg(list);
+  let prev = null, cmpLabel = '';
+  if (S.year !== 'all') {
+    const py = S.year - 1;
+    const prevList = S.runs.filter(r => inTod(r) && r.y === py && (S.year !== curYear || r.doy <= doyOf(today)));
+    if (prevList.length) { prev = agg(prevList); cmpLabel = S.year === curYear ? `מול ${py} עד אותו תאריך` : `מול ${py}`; }
+  }
+  const yearsN = new Set(list.map(r => r.y)).size || 1;
+  const sub = (cur, p, lower, fallback) => prev ? `${delta(cur, p, lower)} <span>${cmpLabel}</span>` : (fallback || '&nbsp;');
+  const paceDiff = prev ? (a.pace - prev.pace) : NaN;
+  const paceSub = prev && isFinite(paceDiff)
+    ? `<span class="${paceDiff < 0 ? 'up' : paceDiff > 0 ? 'down' : ''}">${paceDiff < 0 ? '▲ מהיר' : paceDiff > 0 ? '▼ איטי' : ''} ב־${Math.round(Math.abs(paceDiff))} שנ׳ לק״מ</span> <span>${cmpLabel}</span>`
+    : '&nbsp;';
+  $('kpis').innerHTML = [
+    ['ריצות', `${nf(a.n)}`, sub(a.n, prev?.n, false, S.year === 'all' ? `${nf(a.n / yearsN, 0)} בממוצע לשנה` : '')],
+    ['מרחק', `${nf(a.km, 0)}<small>ק״מ</small>`, sub(a.km, prev?.km, false, S.year === 'all' ? `${nf(a.km / yearsN, 0)} ק״מ בממוצע לשנה` : '')],
+    ['זמן כולל', fmtHours(a.dur), sub(a.dur, prev?.dur, false)],
+    ['קצב ממוצע', `${fmtPace(a.pace)}<small>דק׳/ק״מ</small>`, paceSub],
+    ['קלוריות', `${nf(a.cal)}<small>קק״ל</small>`, sub(a.cal, prev?.cal, false)],
+    ['מרחק ממוצע לריצה', `${nf(a.avgKm, 1)}<small>ק״מ</small>`, sub(a.avgKm, prev?.avgKm, false)],
+  ].map(([k, v, d]) => `<div class="kpi"><div class="k">${k}</div><div class="v">${v}</div><div class="d">${d}</div></div>`).join('');
+}
+
+/* ------------------------------------------------------------ render: years table */
+function renderYears() {
+  const ys = yearsList();
+  const rows = ys.map(y => ({ y, a: agg(S.runs.filter(r => r.y === y && inTod(r))), t: TOD.map(t => S.runs.filter(r => r.y === y && r.tod === t.k).length) }));
+  const maxKm = Math.max(...rows.map(r => r.a.km), 1);
+  const best = Math.min(...rows.filter(r => r.a.n >= 5).map(r => r.a.pace));
+  $('yearsTable').innerHTML = `<thead><tr><th>שנה</th><th class="n">ריצות</th><th class="n">ק״מ</th><th class="n hide-sm">זמן כולל</th><th class="n">קצב ממוצע</th><th class="n hide-sm">ק״מ לריצה</th><th class="n">קלוריות</th><th class="hide-sm">בוקר · צהריים · ערב</th><th aria-hidden="true"></th></tr></thead><tbody>` +
+    rows.map(({ y, a, t }) => {
+      const tot = t.reduce((s, v) => s + v, 0) || 1;
+      const part = y === curYear ? ' <span class="muted small hide-sm">(עד היום)</span>' : '';
+      return `<tr data-y="${y}" class="${S.year === y ? 'sel' : ''}" tabindex="0" aria-label="הצג את ${y}"><td>${y}${part}</td><td class="n">${nf(a.n)}</td>
+      <td class="n">${nf(a.km, 0)}<span class="bar" style="width:${Math.max(2, a.km / maxKm * 70)}px"></span></td>
+      <td class="n hide-sm">${fmtHoursPlain(a.dur)}</td><td class="n">${a.pace === best ? '★ ' : ''}${fmtPace(a.pace)}</td><td class="n hide-sm">${nf(a.avgKm, 1)}</td><td class="n">${nf(a.cal)}</td>
+      <td class="hide-sm"><span class="split" title="${TOD.map((x, i) => `${x.label}: ${t[i]}`).join(' · ')}">${TOD.map((x, i) => `<span style="width:${t[i] / tot * 100}%;background:var(${x.color})"></span>`).join('')}</span>
+      <span class="muted small num">${t.join(' · ')}</span></td><td class="chev" aria-hidden="true">‹</td></tr>`;
+    }).join('') + '</tbody>';
+  $('yearsTable').querySelectorAll('tbody tr').forEach(tr => {
+    const go = () => { const y = +tr.dataset.y; S.year = S.year === y ? 'all' : y; S.shown = 25; render(); };
+    tr.onclick = go; tr.onkeydown = e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); go(); } };
+  });
+}
+
+/* ------------------------------------------------------------ charts */
+function baseOpts() {
+  const ink2 = css('--ink-2'), line = css('--line');
+  Chart.defaults.font.family = 'Rubik, "Segoe UI", Arial, sans-serif';
+  Chart.defaults.color = ink2;
+  return {
+    responsive: true, maintainAspectRatio: false, animation: false,
+    layout: { padding: { left: 10, right: 4 } },
+    interaction: { mode: 'index', intersect: false },
+    plugins: {
+      legend: { display: false },
+      tooltip: { rtl: true, textDirection: 'rtl', backgroundColor: css('--ink'), titleColor: css('--bg'), bodyColor: css('--bg'),
+        padding: 8, cornerRadius: 6, displayColors: true, boxPadding: 4 },
+    },
+    scales: {
+      x: { reverse: true, grid: { display: false }, border: { color: line }, ticks: { color: ink2 } },
+      y: { position: 'right', grid: { color: line }, border: { display: false }, ticks: { color: ink2 }, beginAtZero: true },
+    },
+  };
+}
+function mkChart(id, cfg) { S.charts[id]?.destroy(); S.charts[id] = new Chart($(id), cfg); }
+const merge = (a, b) => { for (const k in b) { if (b[k] && typeof b[k] === 'object' && !Array.isArray(b[k]) && a[k] && typeof a[k] === 'object') merge(a[k], b[k]); else a[k] = b[k]; } return a; };
+
+function renderMonthly() {
+  const accent = css('--accent'), ghost = css('--ghost');
+  const runs = S.runs.filter(inTod);
+  if (S.year === 'all') {
+    const ys = yearsList().slice().reverse();
+    $('monthlyTitle').textContent = 'ק״מ לפי שנה ושעת ריצה';
+    const tods = TOD.filter(t => S.tod === 'all' || S.tod === t.k);
+    $('monthlyLegend').innerHTML = tods.map(t => `<span><i style="background:var(${t.color})"></i>${t.label}</span>`).join('');
+    const narrow = innerWidth < 560;
+    mkChart('cMonthly', { type: 'bar', data: { labels: ys.map(y => narrow ? `’${String(y).slice(2)}` : String(y) + (y === curYear ? '*' : '')),
+      datasets: tods.map(t => ({ label: t.label, data: ys.map(y => runs.filter(r => r.y === y && r.tod === t.k).reduce((a, r) => a + r.dist, 0)),
+        backgroundColor: css(t.color), borderColor: css('--surface'), borderWidth: { top: 2 }, maxBarThickness: 44 })) },
+      options: merge(baseOpts(), { scales: { x: { stacked: true, ticks: { maxRotation: 0 } }, y: { stacked: true } },
+        plugins: { tooltip: { callbacks: { title: c => `${ys[c[0].dataIndex]}${ys[c[0].dataIndex] === curYear ? ' (עד היום)' : ''}`, label: c => ` ${c.dataset.label}: ${nf(c.raw, 0)} ק״מ`,
+          footer: c => `סה״כ ${nf(c.reduce((a, x) => a + x.raw, 0), 0)} ק״מ` } } } }) });
+    void accent; void ghost;
+    return;
+  }
+  const y = S.year, py = y - 1;
+  const by = yy => MONTHS.map((_, m) => runs.filter(r => r.y === yy && r.m === m).reduce((a, r) => a + r.dist, 0));
+  const hasPrev = runs.some(r => r.y === py);
+  $('monthlyTitle').textContent = `ק״מ לפי חודש · ${y}`;
+  $('monthlyLegend').innerHTML = `<span><i style="background:var(--accent)"></i>${y}</span>` + (hasPrev ? `<span><i style="background:var(--ghost)"></i>${py}</span>` : '');
+  const ds = [{ label: String(y), data: by(y), backgroundColor: accent, borderRadius: { topLeft: 4, topRight: 4 }, maxBarThickness: 22 }];
+  if (hasPrev) ds.push({ label: String(py), data: by(py), backgroundColor: ghost, borderRadius: { topLeft: 4, topRight: 4 }, maxBarThickness: 22 });
+  mkChart('cMonthly', { type: 'bar', data: { labels: MONTHS, datasets: ds },
+    options: merge(baseOpts(), { datasets: { bar: { categoryPercentage: .7, barPercentage: .9 } },
+      plugins: { tooltip: { callbacks: { label: c => ` ${c.dataset.label}: ${nf(c.raw, 1)} ק״מ` } } } }) });
+}
+
+const endLabels = {
+  id: 'endLabels',
+  afterDatasetsDraw(chart) {
+    const { ctx } = chart;
+    chart.data.datasets.forEach((ds, i) => {
+      const meta = chart.getDatasetMeta(i); const p = meta.data[meta.data.length - 1]; if (!p || meta.hidden) return;
+      if (!ds._label) return;
+      ctx.save(); ctx.font = `${ds._hl ? 600 : 400} 11px Rubik, Arial`; ctx.fillStyle = ds._hl ? css('--ink') : css('--muted');
+      ctx.textAlign = 'right'; ctx.textBaseline = 'middle'; ctx.fillText(ds.label, p.x - 5, p.y); ctx.restore();
+    });
+  },
+};
+function renderCum() {
+  const ys = yearsList().slice().reverse();
+  const hl = S.year === 'all' ? ys[ys.length - 1] : S.year;
+  const accent = css('--accent'), ghost = css('--ghost');
+  const runs = S.runs.filter(inTod);
+  const ds = ys.map(y => {
+    const list = runs.filter(r => r.y === y).sort((a, b) => a.d - b.d); let c = 0;
+    const pts = [{ x: 1, y: 0 }].concat(list.map(r => ({ x: r.doy, y: (c += r.dist) })));
+    if (y !== curYear && list.length) pts.push({ x: daysInYear(y), y: c });
+    return { label: String(y), data: pts, borderColor: y === hl ? accent : ghost, borderWidth: y === hl ? 2.5 : 1.25, pointRadius: 0,
+      pointHoverRadius: 4, stepped: true, order: y === hl ? 0 : 1, _hl: y === hl, _label: y === hl || y === hl - 1, _pts: pts };
+  });
+  const monthStarts = MONTHS.map((_, m) => doyOf(new Date(2023, m, 1)));
+  mkChart('cCum', { type: 'line', data: { datasets: ds }, plugins: [endLabels],
+    options: merge(baseOpts(), {
+      layout: { padding: { left: 34 } },
+      interaction: { mode: 'nearest', intersect: false, axis: 'x' },
+      scales: { x: { type: 'linear', min: 1, max: 366, afterBuildTicks: ax => { ax.ticks = monthStarts.map(v => ({ value: v })); },
+        ticks: { callback: v => MONTHS[monthStarts.indexOf(v)] ?? '', autoSkip: true, maxRotation: 0 } } },
+      plugins: { tooltip: { mode: 'nearest', intersect: false, filter: c => c.dataset._hl, callbacks: {
+        title: c => { const d = new Date(+c[0].dataset.label, 0, c[0].raw.x); return `${d.getDate()} ב${['ינואר','פברואר','מרץ','אפריל','מאי','יוני','יולי','אוגוסט','ספטמבר','אוקטובר','נובמבר','דצמבר'][d.getMonth()]}`; },
+        label: c => {
+          const at = (pts, x) => { let v = 0; for (const p of pts) { if (p.x <= x) v = p.y; else break; } return v; };
+          const prev = ds.find(d => +d.label === hl - 1);
+          const lines = [` ${c.dataset.label}: ${nf(c.raw.y, 0)} ק״מ`];
+          if (prev) { const pv = at(prev._pts, c.raw.x); const df = c.raw.y - pv; lines.push(` ${prev.label}: ${nf(pv, 0)} ק״מ`, ` הפרש: ${df >= 0 ? '+' : '−'}${nf(Math.abs(df), 0)} ק״מ`); }
+          return lines; } } } },
+    }) });
+}
+
+function renderPace(list) {
+  $('paceLegend').querySelectorAll('[data-t]').forEach(n => { n.hidden = S.tod !== 'all' && n.dataset.t !== S.tod; });
+  const pts = list.slice().sort((a, b) => a.d - b.d);
+  const W = 15, roll = [];
+  pts.forEach((r, i) => { if (i >= W - 1) { const w = pts.slice(i - W + 1, i + 1); const km = w.reduce((a, x) => a + x.dist, 0), t = w.reduce((a, x) => a + x.dur, 0); roll.push({ x: +r.d, y: t / km }); } });
+  const accent = css('--accent');
+  const ptColor = r => css(TOD.find(t => t.k === r.tod).color);
+  let xmin, xmax, ticks;
+  if (S.year !== 'all') { xmin = +new Date(S.year, 0, 1); xmax = +new Date(S.year + 1, 0, 1); ticks = MONTHS.map((_, m) => +new Date(S.year, m, 1)); }
+  else if (pts.length) { const y0 = pts[0].y, y1 = pts[pts.length - 1].y; xmin = +new Date(y0, 0, 1); xmax = +new Date(y1 + 1, 0, 1); ticks = []; for (let y = y0; y <= y1 + 1; y++) ticks.push(+new Date(y, 0, 1)); }
+  const sortedP = pts.map(r => r.pace).sort((a, b) => a - b);
+  const q = f => sortedP[Math.min(sortedP.length - 1, Math.max(0, Math.round(f * (sortedP.length - 1))))];
+  const ymin = sortedP.length ? Math.floor((q(0.01) - 10) / 15) * 15 : 0, ymax = sortedP.length ? Math.ceil((q(0.99) + 10) / 15) * 15 : 420;
+  mkChart('cPace', { type: 'scatter', data: { datasets: [
+    { label: 'ריצה', data: pts.map(r => ({ x: +r.d, y: r.pace, r })), pointRadius: 3.5, pointHoverRadius: 6, borderWidth: 0,
+      backgroundColor: pts.map(r => ptColor(r) + '99'), order: 1 },
+    { label: 'ממוצע נע', type: 'line', data: roll, borderColor: css('--ink'), borderWidth: 2, pointRadius: 0, tension: .3, order: 0 },
+  ] }, options: merge(baseOpts(), {
+    interaction: { mode: 'nearest', intersect: true },
+    scales: {
+      x: { type: 'linear', min: xmin, max: xmax, grid: { display: false }, afterBuildTicks: ax => { if (ticks) ax.ticks = ticks.map(v => ({ value: v })); },
+        ticks: { autoSkip: true, maxRotation: 0, callback: v => { const d = new Date(v); return S.year === 'all' ? String(d.getFullYear()) : MONTHS[d.getMonth()]; } } },
+      y: { reverse: true, beginAtZero: false, min: ymin, max: ymax, ticks: { stepSize: 15, callback: v => fmtPace(v) }, title: { display: true, text: 'דק׳ לק״מ' } },
+    },
+    plugins: { tooltip: { callbacks: {
+      title: c => { const r = c[0].raw.r; return r ? `${fmtDate(r.d)} · ${DOW_FULL[r.dow]} · ${TOD.find(t => t.k === r.tod).label}` : fmtDate(new Date(c[0].raw.x)); },
+      label: c => c.raw.r ? ` ${nf(c.raw.r.dist, 2)} ק״מ · ${fmtPace(c.raw.y)} דק׳/ק״מ` : ` ממוצע נע: ${fmtPace(c.raw.y)}` } } },
+  }) });
+  void accent;
+}
+
+function renderDow(list) {
+  const counts = DOW.map((_, i) => list.filter(r => r.dow === i));
+  mkChart('cDow', { type: 'bar', data: { labels: DOW_FULL, datasets: [{ label: 'ריצות', data: counts.map(c => c.length), backgroundColor: css('--accent'), borderRadius: { topLeft: 4, topRight: 4 }, maxBarThickness: 36 }] },
+    options: merge(baseOpts(), { plugins: { tooltip: { displayColors: false, callbacks: { label: c => { const l = counts[c.dataIndex]; const a = agg(l); return [`${nf(l.length)} ריצות`, l.length ? `ממוצע ${nf(a.avgKm, 1)} ק״מ · ${fmtPace(a.pace)}` : '']; } } } },
+      scales: { y: { ticks: { precision: 0 } } } }) });
+}
+
+function renderDist(list) {
+  const bins = DIST_BINS.map(([lo, hi]) => list.filter(r => r.dist >= lo && r.dist < hi));
+  mkChart('cDist', { type: 'bar', data: { labels: DIST_BINS.map(b => b[2]), datasets: [{ label: 'ריצות', data: bins.map(b => b.length), backgroundColor: css('--accent'), borderRadius: { topLeft: 4, topRight: 4 }, maxBarThickness: 40 }] },
+    options: merge(baseOpts(), { scales: { x: { title: { display: true, text: 'ק״מ' } }, y: { ticks: { precision: 0 } } },
+      plugins: { tooltip: { displayColors: false, callbacks: { title: c => `\u2066${c[0].label}\u2069 ק״מ`, label: c => { const a = agg(bins[c.dataIndex]); return [`${nf(a.n)} ריצות`, a.n ? `קצב ממוצע ${fmtPace(a.pace)}` : '']; } } } } }) });
+}
+
+/* ------------------------------------------------------------ weekly volume */
+const SPIKE = 1.3;
+function weeklySeries(runs, fromWeek, toWeek) {
+  const km = new Map(); runs.forEach(r => { const k = weekStart(r); km.set(k, (km.get(k) || 0) + r.dist); });
+  const out = [];
+  for (let w = fromWeek - 28; w <= toWeek; w += 7) out.push({ w, km: km.get(w) || 0 });
+  out.forEach((o, i) => { const prev = out.slice(Math.max(0, i - 4), i); o.avg4 = prev.length === 4 ? prev.reduce((a, x) => a + x.km, 0) / 4 : null;
+    o.spike = o.avg4 > 0 && o.km > SPIKE * o.avg4 && o.km - o.avg4 >= 8; });
+  return out.filter(o => o.w >= fromWeek);
+}
+const weekLabel = w => { const d = new Date(w * 864e5); return `${d.getUTCDate()}.${d.getUTCMonth() + 1}.${String(d.getUTCFullYear()).slice(2)}`; };
+function renderWeekly() {
+  const runs = S.runs.filter(inTod);
+  let from, to;
+  if (S.year === 'all') { to = dayNum(today) - today.getDay(); from = to - 51 * 7; $('weeklyTitle').textContent = 'נפח שבועי · 52 השבועות האחרונים'; }
+  else { const j = new Date(S.year, 0, 1); from = dayNum(j) - j.getDay(); to = Math.min(dayNum(new Date(S.year, 11, 31)), dayNum(today)); to -= new Date(to * 864e5).getUTCDay(); $('weeklyTitle').textContent = `נפח שבועי · ${S.year}`; }
+  const ser = weeklySeries(runs, from, to);
+  const accent = css('--accent'), warn = css('--warn');
+  mkChart('cWeekly', { type: 'bar', data: { labels: ser.map(o => weekLabel(o.w)), datasets: [
+    { label: 'ק״מ', data: ser.map(o => o.km), backgroundColor: ser.map(o => o.spike ? warn : accent), borderRadius: { topLeft: 3, topRight: 3 }, maxBarThickness: 18, order: 1 },
+    { label: 'ממוצע 4 שבועות', type: 'line', data: ser.map(o => o.avg4), borderColor: css('--ink'), borderWidth: 1.5, pointRadius: 0, tension: .3, order: 0 },
+  ] }, options: merge(baseOpts(), {
+    scales: { x: { ticks: { maxTicksLimit: 9, maxRotation: 0 } }, y: { title: { display: true, text: 'ק״מ' } } },
+    plugins: { tooltip: { callbacks: { title: c => `שבוע שמתחיל ב־${c[0].label}`,
+      label: c => c.datasetIndex === 0 ? ` ${nf(c.raw, 1)} ק״מ${ser[c.dataIndex].spike ? '  ⚠ קפיצה חדה' : ''}` : ` ממוצע 4 שבועות קודמים: ${nf(c.raw, 1)} ק״מ` } } },
+  }) });
+}
+
+/* ------------------------------------------------------------ insights */
+function renderInsights(list) {
+  const out = [];
+  const scopeLabel = S.year === 'all' ? 'בכל השנים' : `ב־${S.year}`;
+  $('insNote').textContent = S.year === 'all' ? 'מחושב מכל ההיסטוריה' : `מחושב לשנת ${S.year}`;
+  if (list.length >= 10) {
+    const a = agg(list);
+    const days = DOW.map((_, i) => agg(list.filter(r => r.dow === i)));
+    const top = days.map((d, i) => ({ d, i })).sort((x, y) => y.d.km - x.d.km)[0];
+    if (top.d.km / a.km > 0.25) out.push(['i', `<b>יום ${DOW_FULL[top.i]}</b> הוא יום הריצה המרכזי ${scopeLabel}: ${nf(top.d.n / a.n * 100)}% מהריצות ו־<b>${nf(top.d.km / a.km * 100)}%</b> מהק״מ, ממוצע ${nf(top.d.avgKm, 1)} ק״מ לריצה לעומת ${nf((a.km - top.d.km) / Math.max(1, a.n - top.d.n), 1)} בשאר הימים.`]);
+    // gaps
+    const ds = [...new Set(list.map(r => r.day))].sort((x, y) => x - y);
+    let gap = 0, gEnd = null; for (let i = 1; i < ds.length; i++) if (ds[i] - ds[i - 1] > gap) { gap = ds[i] - ds[i - 1]; gEnd = ds[i]; }
+    if (gap >= 14) { const s0 = new Date((gEnd - gap) * 864e5), e0 = new Date(gEnd * 864e5); out.push(['i', `ההפסקה הארוכה ביותר ${scopeLabel}: <b>${nf(gap - 1)} ימים</b> בלי ריצה (${s0.getUTCDate()}.${s0.getUTCMonth() + 1}.${s0.getUTCFullYear()} עד ${e0.getUTCDate()}.${e0.getUTCMonth() + 1}.${e0.getUTCFullYear()}).`]); }
+    // consistency
+    const yr = S.year === 'all' ? curYear : S.year;
+    const actPct = y => { const j = new Date(y, 0, 1); const from = dayNum(j) - j.getDay(); const end = y === curYear ? dayNum(today) : dayNum(new Date(y, 11, 31)); const wk = new Set(S.runs.filter(r => r.y === y && inTod(r)).map(weekStart)); let n = 0, t = 0; for (let w = from; w <= end; w += 7) { t++; if (wk.has(w)) n++; } return t ? n / t * 100 : 0; };
+    if (S.runs.some(r => r.y === yr)) { const c = actPct(yr), p = S.runs.some(r => r.y === yr - 1) ? actPct(yr - 1) : null;
+      out.push(['i', `עקביות: רצת ב־<b>${nf(c)}%</b> מהשבועות ב־${yr}${p !== null ? ` (לעומת ${nf(p)}% ב־${yr - 1})` : ''}.`]); }
+    // time-of-day shift
+    const ys = yearsList(); if (ys.length > 1 && S.year === 'all') {
+      const share = y => { const l = S.runs.filter(r => r.y === y); return TOD.map(t => ({ t, p: l.filter(r => r.tod === t.k).length / (l.length || 1) })).sort((a, b) => b.p - a.p)[0]; };
+      const oldY = ys.filter(y => S.runs.filter(r => r.y === y).length >= 20).pop(), newY = ys[0];
+      if (oldY && oldY !== newY) { const o = share(oldY), n = share(newY); if (o.t.k !== n.t.k) out.push(['i', `שינוי הרגלים: ב־${oldY} ${nf(o.p * 100)}% מהריצות היו ב${o.t.label}, וב־${newY} <b>${nf(n.p * 100)}% ב${n.t.label}</b>.`]); }
+    }
+  }
+  // ramp warning: last 4 weeks
+  const nowW = dayNum(today) - today.getDay();
+  const recent = weeklySeries(S.runs, nowW - 3 * 7, nowW).filter(o => o.spike);
+  if (recent.length) { const o = recent[recent.length - 1]; out.push(['!', `קפיצה בנפח: בשבוע של ${weekLabel(o.w)} רצת <b>${nf(o.km, 0)} ק״מ</b>, פי ${nf(o.km / o.avg4, 1)} מהממוצע של 4 השבועות שלפניו. עלייה חדה מעלה סיכון לפציעה; מומלץ להגדיל נפח בהדרגה (עד כ־10%–15% בשבוע).`]); }
+  $('insPanel').hidden = !out.length;
+  $('ins').innerHTML = out.map(([k, t]) => `<li><span class="ico${k === '!' ? ' warn' : ''}" aria-hidden="true">${k === '!' ? '!' : 'i'}</span><span>${t}</span></li>`).join('');
+}
+
+/* ------------------------------------------------------------ time of day */
+function renderTod(list) {
+  const total = list.length || 1;
+  const groups = TOD.map(t => ({ t, a: agg(S.runs.filter(r => (S.year === 'all' || r.y === S.year) && r.tod === t.k)) }));
+  const all = groups.reduce((s, g) => s + g.a.n, 0) || 1;
+  $('todBar').innerHTML = groups.map(g => `<span style="width:${g.a.n / all * 100}%;background:var(${g.t.color})" title="${g.t.label}: ${g.a.n}"></span>`).join('');
+  const fastest = Math.min(...groups.filter(g => g.a.n >= 3).map(g => g.a.pace));
+  $('todCards').innerHTML = groups.map(({ t, a }) => `<div class="todc" style="${S.tod !== 'all' && S.tod !== t.k ? 'opacity:.5' : ''}">
+    <div class="t"><i style="background:var(${t.color})"></i>${t.label}</div>
+    <div class="big">${nf(a.n)} <span class="muted small">ריצות · ${nf(a.n / all * 100)}%</span></div>
+    <dl><dt>קצב ממוצע</dt><dd>${a.pace === fastest ? '★ ' : ''}${fmtPace(a.pace)}</dd><dt>מרחק ממוצע</dt><dd>${a.n ? nf(a.avgKm, 1) + ' ק״מ' : '–'}</dd><dt>סה״כ</dt><dd>${nf(a.km, 0)} ק״מ</dd></dl></div>`).join('');
+  void total;
+}
+
+/* ------------------------------------------------------------ heatmap */
+function renderHeat() {
+  const ys = yearsList(); const y = S.year === 'all' ? ys[0] : S.year;
+  $('heatTitle').textContent = `לוח ריצות · ${y}`;
+  const byDay = new Map();
+  S.runs.filter(r => r.y === y && inTod(r)).forEach(r => { const k = r.day; const v = byDay.get(k) || { km: 0, n: 0, pace: [] }; v.km += r.dist; v.n++; v.pace.push(r); byDay.set(k, v); });
+  const jan1 = new Date(y, 0, 1), first = dayNum(jan1), last = first + daysInYear(y) - 1;
+  const lead = jan1.getDay();
+  const level = km => km <= 0 ? 0 : km < 5 ? 1 : km < 10 ? 2 : km < 16 ? 3 : 4;
+  let html = ''; for (let i = 0; i < lead; i++) html += '<i class="pad"></i>';
+  const todayN = dayNum(today);
+  for (let n = first; n <= last; n++) {
+    const v = byDay.get(n); const d = new Date(y, 0, 1 + (n - first));
+    const label = v ? `${fmtDate(d)} · ${DOW_FULL[d.getDay()]}\n${nf(v.km, 1)} ק״מ${v.n > 1 ? ` (${v.n} ריצות)` : ''} · ${fmtPace(v.pace.reduce((a, r) => a + r.dur, 0) / v.km)}` : `${fmtDate(d)} · ללא ריצה`;
+    html += `<i class="l${v ? level(v.km) : 0}${n > todayN ? ' pad' : ''}" data-tip="${label}"></i>`;
+  }
+  $('heat').innerHTML = html;
+  // month labels: one slot per week column
+  const weeks = Math.ceil((lead + daysInYear(y)) / 7);
+  const labels = Array(weeks).fill('');
+  for (let m = 0; m < 12; m++) { const col = Math.floor((lead + doyOf(new Date(y, m, 1)) - 1) / 7); labels[col] = MONTHS[m]; }
+  $('heatMonths').innerHTML = labels.map(l => `<span>${l}</span>`).join('');
+  const wrap = $('heatWrap'); const frac = y === curYear ? doyOf(today) / daysInYear(y) : 1;
+  requestAnimationFrame(() => { wrap.scrollLeft = -Math.max(0, wrap.scrollWidth * frac - wrap.clientWidth * 0.8); });
+}
+const tip = $('tip');
+document.addEventListener('mouseover', e => { const t = e.target.closest('[data-tip]'); if (!t) { tip.hidden = true; return; } tip.textContent = t.dataset.tip; tip.hidden = false; });
+document.addEventListener('click', e => { const t = e.target.closest('.heat [data-tip]'); if (!t) return; const b = t.getBoundingClientRect(); tip.textContent = t.dataset.tip; tip.hidden = false; tip.style.left = Math.max(8, b.left - tip.offsetWidth / 2) + 'px'; tip.style.top = (b.bottom + 8) + 'px'; clearTimeout(tip._t); tip._t = setTimeout(() => { tip.hidden = true; }, 2500); });
+document.addEventListener('mousemove', e => { if (tip.hidden) return; const w = tip.offsetWidth; let x = e.clientX - w - 12; if (x < 8) x = e.clientX + 12; tip.style.left = x + 'px'; tip.style.top = (e.clientY + 14) + 'px'; });
+
+/* ------------------------------------------------------------ records */
+function renderRecords(list) {
+  $('recNote').textContent = S.year === 'all' ? 'כל הזמנים' : `בשנת ${S.year}`;
+  const cards = [];
+  const when = r => `${fmtDate(r.d)} · ${TOD.find(t => t.k === r.tod).label}`;
+  const longest = list.reduce((m, r) => r.dist > (m?.dist || 0) ? r : m, null);
+  if (longest) cards.push(['הריצה הארוכה ביותר', `${nf(longest.dist, 2)} ק״מ`, `${when(longest)} · ${fmtDur(longest.dur)}`]);
+  [[5, 'הקצב המהיר ביותר (5 ק״מ ומעלה)'], [10, 'הקצב המהיר ביותר (10 ק״מ ומעלה)'], [21.0, 'הקצב המהיר ביותר (חצי מרתון ומעלה)']].forEach(([min, k]) => {
+    const f = list.filter(r => r.dist >= min).reduce((m, r) => r.pace < (m?.pace ?? Infinity) ? r : m, null);
+    if (f) cards.push([k, `${fmtPace(f.pace)} דק׳/ק״מ`, `${fmtDur(f.dur)} ל־${nf(f.dist, 2)} ק״מ · ${when(f)}`]);
+  });
+  const wk = new Map(); list.forEach(r => { const k = weekStart(r); wk.set(k, (wk.get(k) || 0) + r.dist); });
+  let bw = null; wk.forEach((km, k) => { if (!bw || km > bw[1]) bw = [k, km]; });
+  if (bw) { const d = new Date(bw[0] * 864e5); cards.push(['שבוע השיא', `${nf(bw[1], 1)} ק״מ`, `שבוע שמתחיל ב־${d.getUTCDate()}.${d.getUTCMonth() + 1}.${d.getUTCFullYear()}`]); }
+  const mo = new Map(); list.forEach(r => { const k = r.y * 12 + r.m; mo.set(k, (mo.get(k) || 0) + r.dist); });
+  let bm = null; mo.forEach((km, k) => { if (!bm || km > bm[1]) bm = [k, km]; });
+  if (bm) cards.push(['חודש השיא', `${nf(bm[1], 0)} ק״מ`, `${MONTHS[bm[0] % 12]} ${Math.floor(bm[0] / 12)}`]);
+  const weeks = [...new Set(list.map(weekStart))].sort((a, b) => a - b);
+  let best = 0, run = 0, prev = null, bestEnd = null;
+  weeks.forEach(w => { run = prev !== null && w - prev === 7 ? run + 1 : 1; if (run > best) { best = run; bestEnd = w; } prev = w; });
+  if (best) cards.push(['רצף שבועות עם ריצה', `${nf(best)} שבועות`, bestEnd ? `הסתיים בשבוע של ${new Date(bestEnd * 864e5).getUTCDate()}.${new Date(bestEnd * 864e5).getUTCMonth() + 1}.${new Date(bestEnd * 864e5).getUTCFullYear()}` : '']);
+  const days = [...new Set(list.map(r => r.day))].sort((a, b) => a - b);
+  let bd = 0, rd = 0, pd = null, bdEnd = null; days.forEach(d => { rd = pd !== null && d - pd === 1 ? rd + 1 : 1; if (rd > bd) { bd = rd; bdEnd = d; } pd = d; });
+  if (bd) { const e0 = new Date(bdEnd * 864e5); cards.push(['רצף ימים', `${nf(bd)} ימים`, `הסתיים ב־${e0.getUTCDate()}.${e0.getUTCMonth() + 1}.${e0.getUTCFullYear()}`]); }
+  const cal = list.reduce((m, r) => r.cal > (m?.cal || 0) ? r : m, null);
+  if (cal) cards.push(['הכי הרבה קלוריות בריצה', `${nf(cal.cal)} קק״ל`, `${when(cal)} · ${nf(cal.dist, 1)} ק״מ`]);
+  $('recs').innerHTML = cards.length ? cards.map(([k, v, w]) => `<div class="rec"><div class="k">${k}</div><div class="v">${v}</div><div class="w">${w || '&nbsp;'}</div></div>`).join('') : '<p class="muted">אין ריצות בטווח שנבחר.</p>';
+}
+
+/* ------------------------------------------------------------ goal */
+function renderGoal() {
+  const y = S.year === 'all' ? curYear : S.year;
+  const done = S.runs.filter(r => r.y === y).reduce((a, r) => a + r.dist, 0);
+  const prevKm = S.runs.filter(r => r.y === y - 1).reduce((a, r) => a + r.dist, 0);
+  const saved = parseFloat(store.get(`run-dash-goal-${y}`));
+  const diy = daysInYear(y);
+  const isCur = y === curYear, isPast = y < curYear;
+  const dayIdx = isCur ? doyOf(today) : isPast ? diy : 0;
+  const suggested = Math.ceil(Math.max(prevKm, isCur && dayIdx ? done / dayIdx * diy * 1.1 : done) / 50) * 50 || 500;
+  const goal = isFinite(saved) && saved > 0 ? saved : suggested;
+  const isDefault = !(isFinite(saved) && saved > 0);
+  const expected = goal * dayIdx / diy;
+  const proj = isCur && dayIdx ? done / dayIdx * diy : done;
+  const left = Math.max(0, goal - done), weeksLeft = isCur ? Math.max(1, (diy - dayIdx) / 7) : 0;
+  const ahead = done - expected;
+  const pct = Math.min(100, done / goal * 100);
+  $('goalPanel').innerHTML = `
+    <div class="ph"><h2>יעד שנתי · ${y}</h2><span class="note">${isDefault ? 'יעד מוצע: מעט מעל התחזית. אפשר לשנות' : 'נשמר בדפדפן הזה'}</span></div>
+    <div class="goal-row"><label for="goalInput" class="small muted">יעד בק״מ</label><input id="goalInput" type="number" min="10" step="10" value="${goal}" class="num">
+      <span class="small ${ahead >= 0 ? 'up' : 'down'}">${isCur ? (ahead >= 0 ? `▲ ${nf(ahead, 0)} ק״מ לפני הקצב הנדרש` : `▼ ${nf(-ahead, 0)} ק״מ מאחורי הקצב הנדרש`) : isPast ? (done >= goal ? 'היעד הושג ✓' : 'היעד לא הושג') : ''}</span></div>
+    <div class="track" role="progressbar" aria-valuemin="0" aria-valuemax="${goal}" aria-valuenow="${Math.round(done)}" aria-label="התקדמות ליעד">
+      <div class="fill" style="width:${pct}%"></div>${isCur ? `<div class="mark" style="inset-inline-start:${Math.min(100, dayIdx / diy * 100)}%" title="היכן צריך להיות היום"></div>` : ''}</div>
+    <div class="goal-stats">
+      <div><div class="k">בוצע</div><div class="v">${nf(done, 0)} ק״מ · ${nf(pct)}%</div></div>
+      ${isCur ? `<div><div class="k">תחזית לסוף השנה</div><div class="v">${nf(proj, 0)} ק״מ</div></div>
+      <div><div class="k">נדרש בשבוע עד הסוף</div><div class="v">${left ? nf(left / weeksLeft, 1) + ' ק״מ' : 'הושג ✓'}</div></div>` : `<div><div class="k">${y - 1}</div><div class="v">${nf(prevKm, 0)} ק״מ</div></div>`}
+    </div>`;
+  $('goalInput').onchange = e => { const v = parseFloat(e.target.value); if (v > 0) store.set(`run-dash-goal-${y}`, String(v)); else store.del(`run-dash-goal-${y}`); renderGoal(); };
+}
+
+/* ------------------------------------------------------------ runs table */
+const COLS = [
+  { k: 'date', t: 'תאריך', v: r => +r.d, f: r => `${fmtDate(r.d)}` },
+  { k: 'dow', t: 'יום', v: r => r.dow, f: r => DOW_FULL[r.dow] },
+  { k: 'tod', t: 'שעה', v: r => r.d.getHours() * 60 + r.d.getMinutes(), f: r => { const t = TOD.find(x => x.k === r.tod); return `<span class="tag"><i style="background:var(${t.color})"></i>${t.label} · <span class="num">${pad(r.d.getHours())}:${pad(r.d.getMinutes())}</span></span>`; } },
+  { k: 'dist', t: 'מרחק (ק״מ)', s: 'ק״מ', n: 1, v: r => r.dist, f: r => nf(r.dist, 2) },
+  { k: 'dur', t: 'זמן', s: 'זמן', n: 1, v: r => r.dur, f: r => fmtDur(r.dur) },
+  { k: 'pace', t: 'קצב (דק׳/ק״מ)', s: 'קצב', n: 1, v: r => r.pace, f: r => fmtPace(r.pace) },
+  { k: 'cal', t: 'קלוריות', s: 'קק״ל', n: 1, v: r => r.cal, f: r => nf(r.cal) },
+];
+function renderRuns(list) {
+  const c = COLS.find(x => x.k === S.sort.key);
+  const rows = list.slice().sort((a, b) => (c.v(a) - c.v(b)) * S.sort.dir);
+  $('runsNote').textContent = `${nf(list.length)} ריצות`;
+  $('runsTable').innerHTML = `<thead><tr>${COLS.map(x => `<th class="sort${x.n ? ' n' : ''}" data-k="${x.k}" tabindex="0" aria-sort="${S.sort.key === x.k ? (S.sort.dir > 0 ? 'ascending' : 'descending') : 'none'}">${x.t}</th>`).join('')}</tr></thead><tbody>` +
+    rows.slice(0, S.shown).map(r => `<tr>${COLS.map(x => `<td class="c-${x.k}${x.n ? ' n' : ''}" data-l="${x.s || ''}">${x.f(r)}</td>`).join('')}</tr>`).join('') + '</tbody>';
+  $('runsTable').querySelectorAll('th').forEach(th => {
+    const go = () => { const k = th.dataset.k; S.sort = { key: k, dir: S.sort.key === k ? -S.sort.dir : (k === 'pace' || k === 'tod' || k === 'dow' ? 1 : -1) }; renderRuns(scoped()); };
+    th.onclick = go; th.onkeydown = e => { if (e.key === 'Enter') go(); };
+  });
+  $('moreBtn').hidden = rows.length <= S.shown;
+  $('moreBtn').textContent = `הצג עוד (${nf(rows.length - S.shown)} נוספות)`;
+}
+$('moreBtn').onclick = () => { S.shown += 50; renderRuns(scoped()); };
+
+function renderExcluded() {
+  const list = S.excluded.filter(r => S.year === 'all' || r.y === S.year);
+  $('exclSummary').textContent = `פעילויות שהוחרגו: ${nf(list.length)} (${nf(list.reduce((a, r) => a + r.dist, 0), 0)} ק״מ)`;
+  $('exclTable').innerHTML = `<thead><tr><th>תאריך</th><th>סיבה</th><th class="n">מרחק</th><th class="n">זמן</th><th class="n">קצב</th></tr></thead><tbody>` +
+    list.slice(0, 200).map(r => `<tr><td>${fmtDate(r.d)}</td><td>${esc(r.why)}</td><td class="n">${nf(r.dist, 2)}</td><td class="n">${fmtDur(r.dur)}</td><td class="n">${fmtPace(r.pace)}</td></tr>`).join('') + '</tbody>';
+}
+
+function loadRules() {
+  const mk = parseFloat(store.get('run-dash-minkm')), mp = parseFloat(store.get('run-dash-maxpace'));
+  S.minKm = mk >= 0 ? mk : DEF_MIN_KM; S.maxPace = mp > 0 ? mp : DEF_MAX_PACE;
+}
+function applyRules() { setData(S.raw, S.sourceLabel); }
+$('minKm').onchange = e => { const v = parseFloat(e.target.value); if (v >= 0) { S.minKm = v; store.set('run-dash-minkm', String(v)); applyRules(); } };
+$('maxPace').onchange = e => { const v = toSec(e.target.value); if (v >= 120) { S.maxPace = v; store.set('run-dash-maxpace', String(v)); applyRules(); } else e.target.value = fmtPace(S.maxPace); };
+$('resetRules').onclick = () => { store.del('run-dash-minkm'); store.del('run-dash-maxpace'); loadRules(); applyRules(); };
+loadRules();
+
+$('clearTod').onclick = () => { S.tod = 'all'; render(); };
+
+/* ------------------------------------------------------------ main render */
+function esc(s) { return String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c])); }
+function render() {
+  renderSource();
+  $('minKm').value = S.minKm; $('maxPace').value = fmtPace(S.maxPace);
+  const has = S.runs.length > 0;
+  $('dash').hidden = !has; $('filters').hidden = !has; $('empty').hidden = has;
+  $('noMatch').hidden = true;
+  if (!has) {
+    $('emptyHead').textContent = S.all.length ? 'אין בקובץ ריצות שעומדות בתנאים' : 'העלה את קובץ הריצות שלך מגארמין';
+    $('subtitle').textContent = 'כל הריצות מקובץ גארמין, לפי שנים';
+    $('footer').textContent = '';
+    return;
+  }
+  renderFilters();
+  const list = scoped();
+  const none = list.length === 0;
+  $('noMatch').hidden = !none; $('dash').hidden = none;
+  if (none) { $('noMatchTitle').textContent = `אין ריצות ${TOD.find(t => t.k === S.tod)?.label || ''} ב־${S.year}`; return; }
+  renderKPIs(list); renderInsights(list); renderYears(); renderWeekly(); renderMonthly(); renderCum(); renderGoal(); renderTod(list);
+  renderPace(list); renderHeat(); renderDow(list); renderDist(list); renderRecords(list); renderRuns(list); renderExcluded();
+  const first = S.runs[S.runs.length - 1].d, last = S.runs[0].d;
+  $('subtitle').textContent = `${nf(S.runs.length)} ריצות מ־${fmtDate(first)} עד ${fmtDate(last)}`;
+  $('footer').innerHTML = `מקור: ${esc(S.sourceLabel)} · ${nf(S.all.length)} פעילויות, מתוכן ${nf(S.excluded.length)} הוחרגו (לא ריצה, פחות מ־${nf(S.minKm, 1)} ק״מ או קצב איטי מ־${fmtPace(S.maxPace)}). זמן = זמן הטיימר של השעון. קצב ממוצע = זמן כולל חלקי מרחק כולל. שבוע מתחיל ביום ראשון. קלוריות הן הערכה של השעון. הנתונים נשמרים בדפדפן הזה בלבד.`;
+}
+
+function toast(msg) {
+  document.querySelectorAll('.toast').forEach(n => n.remove());
+  const t = document.createElement('div'); t.className = 'toast'; t.setAttribute('role', 'status'); t.textContent = msg; document.body.appendChild(t);
+  setTimeout(() => t.remove(), 4200);
+}
+
+// re-render charts when the theme flips
+const rerender = () => { if (S.runs.length) render(); };
+matchMedia('(prefers-color-scheme: dark)').addEventListener?.('change', rerender);
+new MutationObserver(rerender).observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+
+/* ------------------------------------------------------------ boot */
+(function boot() {
+  if (typeof Chart === 'undefined') { $('emptyText').textContent = 'ספריית הגרפים לא נטענה. רענן את הדף.'; return; }
+  const saved = (() => { try { return JSON.parse(store.get(STORE_KEY)); } catch { return null; } })();
+  if (saved?.recs?.length) setData(saved.recs, `קובץ ${saved.name}`);
+  else render();
+})();
+})();
+</script>
+
+</body></html>
