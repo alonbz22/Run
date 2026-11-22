@@ -1,4 +1,4 @@
-<!doctype html><html lang="he" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; font-src 'none'; connect-src 'self'"></head><body><title>יומן הריצות</title>
+<!doctype html><html lang="he" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; font-src 'none'; connect-src 'none'"></head><body><title>יומן הריצות</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <style>
 /* Layout: a single scanning column — source bar, sticky filter row, KPI strip, then a two-column grid of panels that stacks on phones. */
@@ -355,20 +355,9 @@ footer { color: var(--muted); font-size: .82rem; }
   <p class="small muted">מי שיקבל את הקישור יראה את אותו דאשבורד בדיוק: אותם גרפים, טבלאות וספים. <b>כל מי שיש לו את הקישור יוכל לראות את הריצות שלך</b>, כולל תאריכים ושעות.</p>
   <label class="fld" for="shareName">שם שיוצג לצופים (לא חובה)<input id="shareName" type="text" maxlength="40" placeholder="למשל: אלון"></label>
 
-  <h4>קישור קצר דרך גיטהאב</h4>
-  <label class="fld" for="shareSlug">שם הקישור (אותיות באנגלית, מספרים ומקף)<input id="shareSlug" type="text" maxlength="40" dir="ltr" value="runs" pattern="[a-z0-9-]+" autocomplete="off"></label>
-  <div class="copy-row"><input id="shortUrl" type="text" dir="ltr" readonly aria-label="קישור קצר"><button class="btn" type="button" id="copyShort">העתק</button></div>
-  <p class="small warn-note" id="shortNote" hidden>הקישור הקצר עובד רק מהאתר שמאוחסן ב־github.io. פתח את הדף משם כדי לראות את הכתובת המלאה.</p>
-  <ol class="small">
-    <li>לחץ <b>הורד קובץ שיתוף</b>. יורד קובץ בשם <b dir="ltr" id="slugFile">runs.json</b>.</li>
-    <li>בגיטהאב, במאגר של האתר: <b>Add file ← Upload files</b>, גרור את הקובץ ולחץ <b>Commit changes</b>.</li>
-    <li>אחרי דקה-שתיים הקישור הקצר עובד. כדי לעדכן נתונים, מורידים שוב ומעלים במקום הקובץ הקיים.</li>
-  </ol>
-  <button class="btn primary" type="button" id="downloadShare">הורד קובץ שיתוף</button>
-
-  <h4>או: קישור מיידי בלי העלאה</h4>
-  <p class="small muted">כל הנתונים נדחסים לתוך הקישור עצמו, ולכן הוא ארוך. עובד מיד, גם בוואטסאפ.</p>
-  <div class="copy-row"><button class="btn" type="button" id="copyLong">העתק קישור מיידי</button><span class="small muted" id="longInfo"></span></div>
+  <p class="small muted" style="margin-top:10px">כל הנתונים נדחסים לתוך הקישור עצמו, כך שאין צורך להעלות שום קובץ. הקישור ארוך, אבל עובד מיד, גם בוואטסאפ ובמייל.</p>
+  <div class="copy-row"><button class="btn primary" type="button" id="copyLong">העתק קישור</button><button class="btn" type="button" id="nativeShare" hidden>שתף…</button><span class="small muted" id="longInfo"></span></div>
+  <p class="small warn-note" id="shortNote" hidden>הקישור יפתח את האתר שבו אתה נמצא עכשיו. כדי שחברים יוכלו לפתוח אותו, שתף מהאתר שב־github.io.</p>
 </div>
 <div id="tip" hidden></div>
 
@@ -621,38 +610,31 @@ async function unpackLink(str) {
   return JSON.parse(await new Response(stream).text());
 }
 const siteBase = () => location.protocol.startsWith('http') ? location.origin + location.pathname : null;
-const slugOf = () => ($('shareSlug').value.trim().toLowerCase().replace(/[^a-z0-9-]+/g, '-').replace(/^-+|-+$/g, '') || 'runs');
 function refreshShare() {
-  const base = siteBase(), slug = slugOf();
-  $('slugFile').textContent = `${slug}.json`;
-  $('shortUrl').value = base ? `${base}?v=${slug}` : `https://…github.io/…/?v=${slug}`;
-  $('shortNote').hidden = !!base && /github\.io$/.test(location.hostname);
   $('longInfo').textContent = '';
+  $('shortNote').hidden = !!siteBase() && /github\.io$/.test(location.hostname);
+  $('nativeShare').hidden = typeof navigator.share !== 'function';
 }
-$('shareSlug').addEventListener('input', refreshShare);
 $('shareName').value = store.get('run-dash-share-name') || '';
-$('shareSlug').value = store.get('run-dash-share-slug') || 'runs';
 $('shareName').addEventListener('change', e => store.set('run-dash-share-name', e.target.value.trim()));
-$('shareSlug').addEventListener('change', () => { $('shareSlug').value = slugOf(); store.set('run-dash-share-slug', slugOf()); refreshShare(); });
-async function copyText(text, inputEl) {
-  try { await navigator.clipboard.writeText(text); return true; }
-  catch { if (inputEl) { inputEl.focus(); inputEl.select(); } return false; }
+async function copyText(text) {
+  try { await navigator.clipboard.writeText(text); return true; } catch { return false; }
 }
-$('copyShort').onclick = async () => { const ok = await copyText($('shortUrl').value, $('shortUrl')); toast(ok ? 'הקישור הועתק. הוא יעבוד אחרי שתעלה את קובץ השיתוף לגיטהאב.' : 'סמנתי את הקישור. העתק אותו עם Ctrl+C.'); };
-$('downloadShare').onclick = () => {
-  const json = JSON.stringify(buildShare($('shareName').value.trim()));
-  const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([json], { type: 'application/json' }));
-  a.download = `${slugOf()}.json`; a.addEventListener('click', ev => ev.stopPropagation()); document.body.appendChild(a); a.click(); a.remove();
-  setTimeout(() => URL.revokeObjectURL(a.href), 4000);
-  toast(`הורד הקובץ ${slugOf()}.json. העלה אותו לגיטהאב לאותו מאגר של האתר.`);
+async function instantLink() {
+  if (typeof CompressionStream === 'undefined') { toast('הדפדפן הזה לא תומך ביצירת קישור. נסה בכרום, אדג׳, ספארי או פיירפוקס עדכניים.'); return null; }
+  const base = siteBase() || 'https://alonbz22.github.io/Run/';
+  const url = `${base}#d=${await packLink(buildShare($('shareName').value.trim()))}`;
+  $('longInfo').textContent = `${nf(url.length)} תווים`;
+  return url;
+}
+$('nativeShare').onclick = async () => {
+  const url = await instantLink(); if (!url) return;
+  try { await navigator.share({ title: 'יומן הריצות', url }); } catch { /* cancelled */ }
 };
 $('copyLong').onclick = async () => {
-  if (typeof CompressionStream === 'undefined') { toast('הדפדפן הזה לא תומך ביצירת קישור מיידי. השתמש בקישור הקצר.'); return; }
-  const base = siteBase() || 'https://…github.io/…/';
-  const url = `${base}#d=${await packLink(buildShare($('shareName').value.trim()))}`;
+  const url = await instantLink(); if (!url) return;
   const ok = await copyText(url);
-  $('longInfo').textContent = `${nf(url.length)} תווים`;
-  toast(ok ? 'הקישור המיידי הועתק.' : 'ההעתקה נחסמה בדפדפן הזה. נסה את הקישור הקצר.');
+  toast(ok ? 'הקישור הועתק. אפשר להדביק אותו בוואטסאפ, במייל או בכל מקום אחר.' : 'ההעתקה נחסמה בדפדפן הזה. נסה את כפתור "שתף…".');
 };
 function enterView(shared, label) {
   S.view = { name: shared.name, goals: shared.goals };
@@ -1132,17 +1114,8 @@ new MutationObserver(rerender).observe(document.documentElement, { attributes: t
   const savedTheme = store.get('run-dash-theme');
   if (savedTheme === 'dark' || savedTheme === 'light') document.documentElement.setAttribute('data-theme', savedTheme);
   if (typeof Chart === 'undefined') { $('emptyText').textContent = 'ספריית הגרפים לא נטענה. רענן את הדף.'; return; }
-  const slug = new URLSearchParams(location.search).get('v');
   const hashData = /^#d=([\w-]+)$/.exec(location.hash)?.[1];
   const fail = msg => { render(); $('emptyHead').textContent = 'לא הצלחתי לפתוח את הקישור ששותף'; $('emptyText').textContent = msg; };
-  if (slug && /^[a-z0-9-]{1,40}$/.test(slug)) {
-    $('emptyHead').textContent = 'טוען את הדאשבורד ששותף…'; $('emptyText').textContent = '';
-    fetch(`${slug}.json`, { cache: 'no-cache' })
-      .then(r => { if (!r.ok) throw new Error(r.status === 404 ? 'קובץ השיתוף לא נמצא באתר. אם הוא הועלה עכשיו לגיטהאב, חכה דקה-שתיים ורענן.' : `שגיאה ${r.status}`); return r.json(); })
-      .then(o => { const sh = readShare(o); enterView(sh, sh.name ? `הריצות של ${sh.name}` : 'דאשבורד משותף'); })
-      .catch(e => fail(e.message));
-    return;
-  }
   if (hashData) {
     unpackLink(hashData).then(o => { const sh = readShare(o); enterView(sh, sh.name ? `הריצות של ${sh.name}` : 'דאשבורד משותף'); })
       .catch(() => fail('הקישור פגום או חתוך. בקש מהשולח קישור חדש.'));
