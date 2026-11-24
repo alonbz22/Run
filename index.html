@@ -182,6 +182,8 @@ th.sort[aria-sort="descending"]::after { content: " ▼"; font-size: .7em; }
 .help-x { border: 0; background: transparent; font-size: 1.3rem; line-height: 1; color: var(--muted); padding: 0 4px; }
 .help-pop ol { margin: 10px 0 8px; padding-inline-start: 20px; display: flex; flex-direction: column; gap: 6px; }
 .help-pop p { margin: 0; }
+.key-tabs { display: flex; gap: 4px; margin-bottom: 4px; }
+.share-pop a { color: var(--accent); }
 .share-pop h4 { margin: 14px 0 6px; font-family: var(--font-display); font-size: .92rem; font-weight: 600; }
 .share-pop .fld { display: flex; flex-direction: column; gap: 4px; font-size: .84rem; color: var(--ink-2); margin-top: 10px; }
 .share-pop input[type="text"] { padding: 7px 9px; border: 1px solid var(--line); border-radius: 7px; background: var(--surface-2); min-width: 0; }
@@ -363,10 +365,23 @@ footer { color: var(--muted); font-size: .82rem; }
   <div class="help-head"><h3 id="garminTitle">משיכת ריצות מגארמין</h3><button class="help-x" id="garminClose" type="button" aria-label="סגור">×</button></div>
   <p class="small muted">מדביקים מפתח API אישי מ־Garmin Connect, והאתר מושך את כל היסטוריית הפעילויות. המפתח עובר רק לגארמין דרך שרת החיבור של האתר, שלא שומר אותו.</p>
   <h4>איך יוצרים מפתח (פעם אחת)</h4>
-  <ol class="small">
-    <li>מהמחשב, נכנסים לעמוד <b>Garmin Connect Personal API</b> באתר <b dir="ltr">developer.garmin.com</b> ולוחצים על הקישור לעמוד <b>Personal API Key</b>. צריך להיות מחוברים ל־Garmin Connect.</li>
+  <div class="key-tabs" role="tablist" aria-label="מאיפה יוצרים את המפתח">
+    <button type="button" role="tab" class="chip" id="tabPc" aria-selected="true" aria-pressed="true" aria-controls="keyPc">מהמחשב</button>
+    <button type="button" role="tab" class="chip" id="tabPhone" aria-selected="false" aria-pressed="false" aria-controls="keyPhone">מהטלפון</button>
+  </div>
+  <ol class="small" id="keyPc" role="tabpanel" aria-labelledby="tabPc">
+    <li>פותחים את <a href="https://developer.garmin.com/gc-developer-program/personal/personal-api/" target="_blank" rel="noopener">עמוד Garmin Connect Personal API</a> ולוחצים על הקישור <b>Personal API Key page</b>. אם צריך, מתחברים עם המשתמש והסיסמה של Garmin Connect.</li>
     <li>לוחצים <b>Create Key</b>, מאשרים את התנאים, בוחרים תוקף (מומלץ שנה) ולוחצים <b>Create</b>.</li>
-    <li>מעתיקים את המפתח. גארמין מציגה אותו רק פעם אחת, אז שמרו אותו במקום בטוח.</li>
+    <li>מעתיקים את המפתח (<b>Ctrl+C</b>) ושומרים אותו במקום בטוח. גארמין מציגה אותו רק פעם אחת.</li>
+    <li>מדביקים אותו כאן למטה (<b>Ctrl+V</b>) ולוחצים <b>משוך ריצות</b>.</li>
+  </ol>
+  <ol class="small" id="keyPhone" role="tabpanel" aria-labelledby="tabPhone" hidden>
+    <li>בטלפון, פותחים את <a href="https://developer.garmin.com/gc-developer-program/personal/personal-api/" target="_blank" rel="noopener">עמוד Garmin Connect Personal API</a> בדפדפן (Chrome או Safari), לא באפליקציית Garmin Connect.</li>
+    <li>מקישים על הקישור <b>Personal API Key page</b> ומתחברים עם המשתמש והסיסמה של Garmin Connect.</li>
+    <li>אם במקום העמוד נפתחת אפליקציית Garmin Connect או עמוד לא מתאים: חוזרים לדפדפן, פותחים את התפריט (⋮ ב־Chrome, או <b>aA</b> ב־Safari), בוחרים <b>אתר למחשב</b> (Desktop site) ומקישים שוב על הקישור.</li>
+    <li>מקישים <b>Create Key</b>, מאשרים את התנאים, בוחרים תוקף (מומלץ שנה) ומקישים <b>Create</b>.</li>
+    <li>לוחצים לחיצה ארוכה על המפתח ובוחרים <b>העתק</b>, או מקישים על כפתור ההעתקה אם יש. כדאי לשמור אותו גם באפליקציית הפתקים או במנהל הסיסמאות, כי גארמין מציגה אותו רק פעם אחת.</li>
+    <li>חוזרים לכאן, לוחצים לחיצה ארוכה בשדה המפתח, בוחרים <b>הדבק</b> ומקישים <b>משוך ריצות</b>.</li>
   </ol>
   <label class="fld" for="garminKey">המפתח שלך<input id="garminKey" type="password" dir="ltr" autocomplete="off" spellcheck="false"></label>
   <label class="small" style="display:flex;gap:6px;align-items:center;margin-top:8px"><input type="checkbox" id="garminRemember"> לזכור את המפתח בדפדפן הזה (רק במחשב אישי)</label>
@@ -598,6 +613,7 @@ const gStatus = (msg, bad) => { $('garminStatus').textContent = msg; $('garminSt
 function openGarmin() {
   const saved = store.get(GKEY) || '';
   $('garminKey').value = saved; $('garminRemember').checked = !!saved; $('garminForget').hidden = !saved; gStatus('');
+  keyTab(matchMedia('(pointer: coarse)').matches && innerWidth < 900);
 }
 async function proxyCall(path, opts = {}) {
   let res;
@@ -655,6 +671,13 @@ $('garminGo').onclick = async () => {
   } catch (e) { gStatus(e.message, true); }
   finally { btn.disabled = false; }
 };
+function keyTab(phone) {
+  $('keyPc').hidden = phone; $('keyPhone').hidden = !phone;
+  [['tabPc', !phone], ['tabPhone', phone]].forEach(([id, on]) => { $(id).setAttribute('aria-selected', on); $(id).setAttribute('aria-pressed', on); });
+  if (POP.el) placePop();
+}
+$('tabPc').onclick = () => keyTab(false);
+$('tabPhone').onclick = () => keyTab(true);
 $('garminForget').onclick = () => { store.del(GKEY); $('garminKey').value = ''; $('garminRemember').checked = false; $('garminForget').hidden = true; gStatus('המפתח נמחק מהדפדפן הזה.'); renderSource(); };
 
 /* ------------------------------------------------------------ sharing */
