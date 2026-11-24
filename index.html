@@ -240,17 +240,28 @@ footer { color: var(--muted); font-size: .82rem; }
   .kpi:nth-child(even) { border-inline-start: 1px solid var(--line); }
   .kpi .v { font-size: 1.4rem; }
   .tod { grid-template-columns: minmax(0, 1fr); }
-  .chart { height: 220px; }
 }
+/* A4 page layout: applied just before printing so the charts redraw at page size */
+body.printing .app { width: 794px !important; max-width: 794px !important; margin: 0 auto; padding: 10mm !important; gap: 10px; }
+body.printing #dash { gap: 10px !important; }
+body.printing .kpis { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+body.printing .kpi { border-top: 0; }
+body.printing .kpi:nth-child(n+4) { border-top: 1px solid var(--line); }
+body.printing .kpi:nth-child(4) { border-inline-start: 0; }
+body.printing .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+body.printing .panel.wide, body.printing .panel:has(#todCards), body.printing .panel:has(#cMonthly) { grid-column: 1 / -1; }
+body.printing .chart { height: 210px; }
+body.printing .chart.tall { height: 250px; }
+body.printing .tod { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 @media print {
-  @page { size: A4; margin: 12mm; }
-  body { background: #fff; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-  .panel:has(#todCards), .panel:has(#cMonthly) { grid-column: 1 / -1; }
+  @page { size: A4; margin: 0; }
+  html, body { background: var(--bg) !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+  /* Chrome clips RTL documents when printing; keep the root LTR and the dashboard itself RTL */
+  html { direction: ltr !important; }
+  .app { direction: rtl; }
   .source, .filters, .help-pop, .toast, #tip, #moreBtn, details.excl, .panel.wide:has(details.excl), .chev, #noMatch, #empty { display: none !important; }
-  .app { max-width: none; padding: 0; gap: 10px; }
+  #dash { gap: 10px !important; }
   .kpis, .panel { box-shadow: none; break-inside: avoid; }
-  .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
-  .panel.wide { grid-column: 1 / -1; }
   .chart { height: 220px; }
   .heat-wrap { overflow: hidden; }
   .heat { grid-template-rows: repeat(7, 8px); gap: 2px; }
@@ -419,7 +430,7 @@ footer { color: var(--muted); font-size: .82rem; }
   <div class="copy-row"><button class="btn primary" type="button" id="shareHtml">הורד קובץ HTML</button><button class="btn" type="button" id="sendHtml" hidden>שלח קובץ…</button></div>
 
   <h4>קובץ PDF</h4>
-  <p class="small muted">עותק להדפסה או לקריאה בטלפון, בלי אינטראקציה. בחלון שייפתח בוחרים <b>שמירה כ־PDF</b> (Save as PDF) כיעד.</p>
+  <p class="small muted">עותק להדפסה או לקריאה בטלפון, בלי אינטראקציה. בחלון שייפתח בוחרים <b>שמירה כ־PDF</b> (Save as PDF) כיעד. ה־PDF ייראה כמו המסך, בתצוגה הכהה או הבהירה שבחרת.</p>
   <div class="copy-row"><button class="btn" type="button" id="sharePdf">שמור כ־PDF</button></div>
 </div>
 <div class="help-pop share-pop" id="garminPop" role="dialog" aria-labelledby="garminTitle" dir="rtl" lang="he" hidden>
@@ -811,18 +822,15 @@ $('sendHtml').onclick = async () => {
   try { const f = snapshotFile(); await navigator.share({ files: [f], title: 'יומן הריצות' }); }
   catch (e) { if (e?.name !== 'AbortError') toast('השליתה נכשלה. נסה "הורד קובץ HTML".'); }
 };
-$('sharePdf').onclick = async () => {
-  closePop();
-  const wasDark = isDark(), prevTheme = document.documentElement.getAttribute('data-theme');
-  if (wasDark) document.documentElement.setAttribute('data-theme', 'light');   // print on white
-  document.body.classList.add('printing');
-  render();
-  await new Promise(r => setTimeout(r, 350));
-  try { window.print(); }
-  finally {
-    document.body.classList.remove('printing');
-    if (wasDark) { if (prevTheme) document.documentElement.setAttribute('data-theme', prevTheme); else document.documentElement.removeAttribute('data-theme'); }
-  }
+function redrawCharts() { Object.values(Chart.instances).forEach(c => { c.resize(); c.update('none'); }); }
+function preparePrint() { if (document.body.classList.contains('printing')) return; closePop(); document.body.classList.add('printing'); redrawCharts(); }
+function restorePrint() { if (!document.body.classList.contains('printing')) return; document.body.classList.remove('printing'); redrawCharts(); }
+addEventListener('beforeprint', preparePrint);   // also covers Ctrl+P
+addEventListener('afterprint', restorePrint);
+$('sharePdf').onclick = () => {
+  preparePrint();
+  // give the charts a moment to redraw at page size, then open the print dialog (same theme as the screen)
+  setTimeout(() => { window.print(); setTimeout(restorePrint, 500); }, 250);
 };
 function enterView(shared, label) {
   S.view = { name: shared.name, goals: shared.goals };
