@@ -1,4 +1,4 @@
-<!doctype html><html lang="he" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; font-src 'none'; connect-src 'none'"></head><body><title>יומן הריצות</title>
+<!doctype html><html lang="he" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover"><meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src data:; font-src 'none'; connect-src https://garmin-proxy.bzalon22.workers.dev"></head><body><title>יומן הריצות</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <style>
 /* Layout: a single scanning column — source bar, sticky filter row, KPI strip, then a two-column grid of panels that stacks on phones. */
@@ -359,6 +359,20 @@ footer { color: var(--muted); font-size: .82rem; }
   <div class="copy-row"><button class="btn primary" type="button" id="copyLong">העתק קישור</button><button class="btn" type="button" id="nativeShare" hidden>שתף…</button><span class="small muted" id="longInfo"></span></div>
   <p class="small warn-note" id="shortNote" hidden>הקישור יפתח את האתר שבו אתה נמצא עכשיו. כדי שחברים יוכלו לפתוח אותו, שתף מהאתר שב־github.io.</p>
 </div>
+<div class="help-pop share-pop" id="garminPop" role="dialog" aria-labelledby="garminTitle" dir="rtl" lang="he" hidden>
+  <div class="help-head"><h3 id="garminTitle">משיכת ריצות מגארמין</h3><button class="help-x" id="garminClose" type="button" aria-label="סגור">×</button></div>
+  <p class="small muted">מדביקים מפתח API אישי מ־Garmin Connect, והאתר מושך את כל היסטוריית הפעילויות. המפתח עובר רק לגארמין דרך שרת החיבור של האתר, שלא שומר אותו.</p>
+  <h4>איך יוצרים מפתח (פעם אחת)</h4>
+  <ol class="small">
+    <li>מהמחשב, נכנסים לעמוד <b>Garmin Connect Personal API</b> באתר <b dir="ltr">developer.garmin.com</b> ולוחצים על הקישור לעמוד <b>Personal API Key</b>. צריך להיות מחוברים ל־Garmin Connect.</li>
+    <li>לוחצים <b>Create Key</b>, מאשרים את התנאים, בוחרים תוקף (מומלץ שנה) ולוחצים <b>Create</b>.</li>
+    <li>מעתיקים את המפתח. גארמין מציגה אותו רק פעם אחת, אז שמרו אותו במקום בטוח.</li>
+  </ol>
+  <label class="fld" for="garminKey">המפתח שלך<input id="garminKey" type="password" dir="ltr" autocomplete="off" spellcheck="false"></label>
+  <label class="small" style="display:flex;gap:6px;align-items:center;margin-top:8px"><input type="checkbox" id="garminRemember"> לזכור את המפתח בדפדפן הזה (רק במחשב אישי)</label>
+  <div class="copy-row"><button class="btn primary" type="button" id="garminGo">משוך ריצות</button><button class="btn" type="button" id="garminForget" hidden>שכח את המפתח</button></div>
+  <p class="small" id="garminStatus" aria-live="polite" style="margin-top:8px"></p>
+</div>
 <div id="tip" hidden></div>
 
 <script>/*!
@@ -501,7 +515,7 @@ async function loadCSVFile(file) {
     const recs = csvToRecords(await file.text());
     if (!recs.length) throw new Error('לא נמצאו פעילויות בקובץ.');
     exitView();
-    store.set(STORE_KEY, JSON.stringify({ name: file.name, at: Date.now(), recs }));
+    store.set(STORE_KEY, JSON.stringify({ name: file.name, label: `קובץ ${file.name}`, at: Date.now(), recs }));
     setData(recs, `קובץ ${file.name}`);
     toast(`נטענו ${nf(recs.length)} פעילויות מהקובץ`);
   } catch (e) { toast(e.message || 'קריאת הקובץ נכשלה'); }
@@ -524,7 +538,8 @@ const curYear = today.getFullYear();
 const isDark = () => { const t = document.documentElement.getAttribute('data-theme'); return t ? t === 'dark' : matchMedia('(prefers-color-scheme: dark)').matches; };
 function renderSource() {
   const has = S.all.length > 0;
-  const btns = (pfx) => `<button class="btn primary" type="button" data-act="upload">העלה קובץ</button>
+  const gBtn = GARMIN_PROXY ? `<button class="btn" type="button" data-act="garmin" aria-expanded="false" aria-controls="garminPop">${store.get(GKEY) ? 'רענן מגארמין' : 'התחבר לגארמין'}</button>` : '';
+  const btns = (pfx) => `${S.view ? '' : gBtn}<button class="btn primary" type="button" data-act="upload">העלה קובץ</button>
     <button class="help-btn" type="button" data-act="help" aria-label="איך מייצאים קובץ מגארמין" aria-expanded="false" aria-controls="helpPop" id="${pfx}Help">?</button>`;
   const dark = isDark();
   const themeBtn = `<button class="help-btn" type="button" data-act="theme" aria-label="${dark ? 'עבור לתצוגה בהירה' : 'עבור לתצוגה כהה'}" title="${dark ? 'תצוגה בהירה' : 'תצוגה כהה'}">${dark
@@ -547,6 +562,7 @@ document.addEventListener('click', e => {
   const b = e.target.closest('[data-act]');
   if (b?.dataset.act === 'upload') $('csvInput').click();
   else if (b?.dataset.act === 'help') togglePop($('helpPop'), b, $('helpClose'));
+  else if (b?.dataset.act === 'garmin') { togglePop($('garminPop'), b, $('garminKey')); if (!$('garminPop').hidden) openGarmin(); }
   else if (b?.dataset.act === 'share') { togglePop($('sharePop'), b, $('shareName')); if (!$('sharePop').hidden) refreshShare(); }
   else if (b?.dataset.act === 'theme') { const next = isDark() ? 'light' : 'dark'; store.set('run-dash-theme', next); document.documentElement.setAttribute('data-theme', next); renderSource(); }
   else if (b?.dataset.act === 'clear') { store.del(STORE_KEY); S.raw = []; setData([], ''); toast('הנתונים הוסרו מהדפדפן.'); }
@@ -569,10 +585,77 @@ function closePop() {
   if (el.contains(document.activeElement) && anchor.isConnected) anchor.focus();
   POP.el = POP.anchor = null;
 }
-$('helpClose').onclick = closePop; $('shareClose').onclick = closePop;
+$('helpClose').onclick = closePop; $('shareClose').onclick = closePop; $('garminClose').onclick = closePop;
 document.addEventListener('keydown', e => { if (e.key === 'Escape' && POP.el) closePop(); });
 addEventListener('resize', () => { if (POP.el) placePop(); });
 addEventListener('scroll', () => { if (POP.el) placePop(); }, { passive: true });
+
+/* ------------------------------------------------------------ Garmin Connect (Personal API via the site's proxy) */
+// Address of the Cloudflare Worker in worker/worker.js. Empty = the Garmin button stays hidden.
+const GARMIN_PROXY = 'https://garmin-proxy.bzalon22.workers.dev';
+const GKEY = 'run-dash-garmin-key';
+const gStatus = (msg, bad) => { $('garminStatus').textContent = msg; $('garminStatus').style.color = bad ? 'var(--bad)' : 'var(--ink-2)'; };
+function openGarmin() {
+  const saved = store.get(GKEY) || '';
+  $('garminKey').value = saved; $('garminRemember').checked = !!saved; $('garminForget').hidden = !saved; gStatus('');
+}
+async function proxyCall(path, opts = {}) {
+  let res;
+  try { res = await fetch(GARMIN_PROXY + path, opts); }
+  catch { throw new Error('אין חיבור לשרת החיבור של האתר. בדוק חיבור לאינטרנט ונסה שוב.'); }
+  let body = null; try { body = await res.json(); } catch { /* not json */ }
+  if (res.ok) return body;
+  const gs = body?.status;
+  if (path === '/token' && (gs === 400 || gs === 401 || gs === 403)) throw new Error('גארמין לא קיבלה את המפתח. ודא שהעתקת אותו במלואו ושהוא לא פג או נמחק.');
+  if (gs === 429) throw new Error('גארמין חוסמת זמנית בגלל ריבוי בקשות. נסה שוב בעוד כמה דקות.');
+  if (gs) throw new Error(`גארמין החזירה שגיאה ${gs}. ${body.detail ? '(' + String(body.detail).slice(0, 120) + ')' : ''}`);
+  throw new Error(`שרת החיבור החזיר שגיאה ${res.status}.`);
+}
+function listOf(page) {
+  if (Array.isArray(page)) return page;
+  const arr = page && Object.values(page).find(Array.isArray);
+  return arr || [];
+}
+function fromGarmin(a) {
+  const t = a.activityType;
+  return {
+    date: String(a.startTimeLocal || a.startTime || '').replace('T', ' ').slice(0, 19),
+    type: (t && typeof t === 'object' ? t.typeKey : t) || a.activityTypeKey || 'unknown',
+    dist: (+a.distance || 0) / 1000,
+    dur: +a.duration || +a.elapsedDuration || +a.movingDuration || 0,
+    cal: +a.calories || 0,
+  };
+}
+async function garminSync(key) {
+  gStatus('מקבל אישור מגארמין…');
+  const { token } = await proxyCall('/token', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ key }) });
+  const recs = []; const LIMIT = 100;
+  for (let start = 0; start < 20000; start += LIMIT) {
+    const page = listOf(await proxyCall(`/activities?start=${start}&limit=${LIMIT}`, { headers: { Authorization: `Bearer ${token}` } }));
+    recs.push(...page.map(fromGarmin).filter(r => parseLocal(r.date)));
+    gStatus(`הורדו ${nf(recs.length)} פעילויות…`);
+    if (page.length < LIMIT) break;
+  }
+  if (!recs.length) throw new Error('גארמין לא החזירה פעילויות לחשבון הזה.');
+  return recs;
+}
+$('garminGo').onclick = async () => {
+  const key = $('garminKey').value.trim();
+  if (!key) { gStatus('הדבק את המפתח שלך.', true); $('garminKey').focus(); return; }
+  const btn = $('garminGo'); btn.disabled = true;
+  try {
+    const recs = await garminSync(key);
+    if ($('garminRemember').checked) store.set(GKEY, key); else store.del(GKEY);
+    exitView();
+    const label = 'Garmin Connect';
+    store.set(STORE_KEY, JSON.stringify({ name: label, label, at: Date.now(), recs }));
+    setData(recs, label);
+    closePop();
+    toast(`נמשכו ${nf(recs.length)} פעילויות מגארמין`);
+  } catch (e) { gStatus(e.message, true); }
+  finally { btn.disabled = false; }
+};
+$('garminForget').onclick = () => { store.del(GKEY); $('garminKey').value = ''; $('garminRemember').checked = false; $('garminForget').hidden = true; gStatus('המפתח נמחק מהדפדפן הזה.'); renderSource(); };
 
 /* ------------------------------------------------------------ sharing */
 // Compact payload: runs sorted by start time, minutes delta-encoded.
@@ -1122,7 +1205,7 @@ new MutationObserver(rerender).observe(document.documentElement, { attributes: t
     return;
   }
   const saved = (() => { try { return JSON.parse(store.get(STORE_KEY)); } catch { return null; } })();
-  if (saved?.recs?.length) setData(saved.recs, `קובץ ${saved.name}`);
+  if (saved?.recs?.length) setData(saved.recs, saved.label || `קובץ ${saved.name}`);
   else render();
 })();
 })();
