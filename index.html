@@ -456,7 +456,7 @@ body.printing .tod { grid-template-columns: repeat(3, minmax(0, 1fr)); }
     <li>חוזרים לכאן, לוחצים לחיצה ארוכה בשדה המפתח, בוחרים <b>הדבק</b> ומקישים <b>משוך ריצות</b>.</li>
   </ol>
   <label class="fld" for="garminKey">המפתח שלך<input id="garminKey" type="password" dir="ltr" autocomplete="off" spellcheck="false"></label>
-  <label class="small" style="display:flex;gap:6px;align-items:center;margin-top:8px"><input type="checkbox" id="garminRemember"> לזכור את המפתח בדפדפן הזה (רק במחשב אישי)</label>
+  <label class="small" style="display:flex;gap:6px;align-items:center;margin-top:8px"><input type="checkbox" id="garminRemember"> לזכור את המפתח בדפדפן הזה, ולרענן אוטומטית בכל כניסה (רק במכשיר אישי)</label>
   <div class="copy-row"><button class="btn primary" type="button" id="garminGo">משוך ריצות</button><button class="btn" type="button" id="garminForget" hidden>שכח את המפתח</button></div>
   <p class="small" id="garminStatus" aria-live="polite" style="margin-top:8px"></p>
 </div>
@@ -644,7 +644,7 @@ function renderSource() {
   } else {
     $('viewBanner').hidden = true;
     $('source').innerHTML = has
-      ? `<span class="pill"><span class="dot on"></span>${esc(S.sourceLabel)}</span>` + themeBtn + (S.runs.length ? shareBtn : '') + btns('top')
+      ? `<span class="pill"><span class="dot on"></span>${esc(S.sourceLabel)}${S.syncing ? ' · מרענן…' : ''}</span>` + themeBtn + (S.runs.length ? shareBtn : '') + btns('top')
         + `<button class="btn" type="button" data-act="clear" title="מוחק את הנתונים שנשמרו בדפדפן הזה">הסר נתונים</button>`
       : themeBtn;
   }
@@ -732,6 +732,30 @@ async function garminSync(key) {
   if (!recs.length) throw new Error('גארמין לא החזירה פעילויות לחשבון הזה.');
   return recs;
 }
+const G_LABEL = 'Garmin Connect';
+function applyGarmin(recs) {
+  store.set(STORE_KEY, JSON.stringify({ name: G_LABEL, label: G_LABEL, at: Date.now(), recs }));
+  setData(recs, G_LABEL);
+}
+// Quietly pull new runs when the site opens, if the key is remembered in this browser.
+async function autoRefresh(saved) {
+  const key = store.get(GKEY);
+  if (!GARMIN_PROXY || !key) return;
+  if (saved?.recs?.length && saved.label !== G_LABEL) return;            // the user loaded a CSV: leave it
+  if (saved?.at && Date.now() - saved.at < 5 * 60 * 1000) return;       // just synced
+  const before = new Set(S.runs.map(r => r.date));
+  S.syncing = true; renderSource();
+  try {
+    const recs = await garminSync(key);
+    if (S.view) return;                                                  // the user switched views meanwhile
+    applyGarmin(recs);
+    const added = S.runs.filter(r => !before.has(r.date)).length;
+    if (added && before.size) toast(added === 1 ? 'נוספה ריצה חדשה מגארמין' : `נוספו ${nf(added)} ריצות חדשות מגארמין`);
+    else if (!before.size) toast(`נמשכו ${nf(S.runs.length)} ריצות מגארמין`);
+  } catch (e) {
+    toast(`הרענון האוטומטי מגארמין לא הצליח: ${e.message}`);
+  } finally { S.syncing = false; renderSource(); }
+}
 $('garminGo').onclick = async () => {
   const key = $('garminKey').value.trim();
   if (!key) { gStatus('הדבק את המפתח שלך.', true); $('garminKey').focus(); return; }
@@ -740,9 +764,7 @@ $('garminGo').onclick = async () => {
     const recs = await garminSync(key);
     if ($('garminRemember').checked) store.set(GKEY, key); else store.del(GKEY);
     exitView();
-    const label = 'Garmin Connect';
-    store.set(STORE_KEY, JSON.stringify({ name: label, label, at: Date.now(), recs }));
-    setData(recs, label);
+    applyGarmin(recs);
     closePop();
     toast(`נמשכו ${nf(recs.length)} פעילויות מגארמין`);
   } catch (e) { gStatus(e.message, true); }
@@ -1324,6 +1346,7 @@ new MutationObserver(rerender).observe(document.documentElement, { attributes: t
   const saved = (() => { try { return JSON.parse(store.get(STORE_KEY)); } catch { return null; } })();
   if (saved?.recs?.length) setData(saved.recs, saved.label || `קובץ ${saved.name}`);
   else render();
+  autoRefresh(saved);
 })();
 })();
 </script>
