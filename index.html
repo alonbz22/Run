@@ -644,7 +644,9 @@ function renderSource() {
   } else {
     $('viewBanner').hidden = true;
     $('source').innerHTML = has
-      ? `<span class="pill"><span class="dot on"></span>${esc(S.sourceLabel)}${S.syncing ? ' · מרענן…' : ''}</span>` + themeBtn + (S.runs.length ? shareBtn : '') + btns('top')
+      ? `<span class="pill"><span class="dot on"></span>${esc(S.sourceLabel)}${S.syncing ? ' · מרענן…' : ''}</span>` + themeBtn + (S.runs.length ? shareBtn : '')
+        // data from Garmin: only the refresh button; the CSV upload (and its "?") only for file users
+        + (S.sourceLabel === G_LABEL && GARMIN_PROXY ? gBtn.replace('התחבר לגארמין', 'רענן מגארמין') : btns('top'))
         + `<button class="btn" type="button" data-act="clear" title="מוחק את הנתונים שנשמרו בדפדפן הזה">הסר נתונים</button>`
       : themeBtn;
   }
